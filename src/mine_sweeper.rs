@@ -1,8 +1,6 @@
 use std::fmt::Display;
 
 
-
-
 pub type Coordinate = (usize, usize);
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -46,17 +44,11 @@ impl Cell {
     }
     /// Creates a new cell with state [`closed`](CellState::Closed) and content [`0`](CellContent::Number).
     pub fn closed() -> Self {
-        Cell {
-            state: CellState::Closed,
-            content: CellContent::Number(0),
-        }
+        Self::new(CellState::Closed, CellContent::Number(0))
     }
     /// Creates a new cell with state [`open`](CellState::Open) and content [`0`](CellContent::Number).
     pub fn open() -> Self {
-        Cell {
-            state: CellState::Open,
-            content: CellContent::Number(0),
-        }
+        Self::new(CellState::Open, CellContent::Number(0))
     }
 }
 
@@ -87,17 +79,22 @@ impl Display for Cell {
 
 
 /// A board with its cells.
+///
 /// Provides methods to create a new instance, to open and flag cells
 /// and to access the content and the state of a cell.
 pub trait MineSweeper {
     /// Creates a new instance of the game.
     fn new(width: usize, height: usize, mines: usize) -> Self;
-    /// Tries to open a cell. Returns an error if the given coordinate is out of bounds.
-    /// If the cell is already open or flagged, returns None.
+    /// Tries to open a cell.
+    ///
+    /// Returns [`an error`](Error::OutOfBounds) if the given coordinate is out of bounds.
+    /// If the cell is already open or flagged, returns `None`.
     /// Otherwise returns the content of the opened cell.
     fn open(&mut self, coord: Coordinate) -> Result<Option<CellContent>>;
-    ///Tries to flag a cell. Returns an error if the given coordinate is out of bounds.
-    /// If the cell is already open or flagged, returns None.
+    /// Tries to flag a cell.
+    ///
+    /// Returns [`an error`](Error::OutOfBounds) if the given coordinate is out of bounds.
+    /// If the cell is already open or flagged, returns `None`.
     /// Otherwise returns the content of the flagged cell.
     fn toggle_flag(&mut self, coord: Coordinate) -> Result<Option<CellState>>;
     fn get_cell(&self, coord: Coordinate) -> Result<Option<Cell>>;
@@ -105,7 +102,9 @@ pub trait MineSweeper {
 
 
 /// Provides utility methods for minesweeper implementations.
-pub(crate) trait MineSweeperUtils {
+pub trait MineSweeperUtils {
+    /// Use this function to randomize the positions of mines. Useful when initializing a board.
     fn randomize_mines(&mut self, mines: usize);
+    /// Use this function to increment the value of a non-mine cell. Useful when initializing a board.
     fn increment_neighbors(&mut self, coord: Coordinate);
 }

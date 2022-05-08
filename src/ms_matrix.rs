@@ -69,24 +69,40 @@ impl MineSweeper for GridMatrix {
                 }
                 _ => Ok(None),
             }
-        }
+        };
+        todo!()
     }
 
     fn toggle_flag(&mut self, (x, y): Coordinate) -> Result<Option<CellState>> {
         if x >= self.width || y >= self.height {
             Err(Error::OutOfBounds)
         } else {
-            todo!()
+            match self.cells[x][y].state {
+                CellState::Closed => {
+                    self.cells[x][y].state = CellState::Flagged;
+                    Ok(Some(CellState::Flagged))
+                }
+                CellState::Flagged => {
+                    self.cells[x][y].state = CellState::Closed;
+                    Ok(Some(CellState::Closed))
+                }
+                _ => Ok(None),
+            }
         }
     }
 
     fn get_cell(&self, coord: Coordinate) -> Result<Option<Cell>> {
         self.cells
             .get(coord.0)
-            .map_or(Err(Error::OutOfBounds), |row| {
-                row.get(coord.1)
-                   .map_or(Err(Error::OutOfBounds), |cell| Ok(Some(*cell)))
-            })
+            .map_or(
+                Err(Error::OutOfBounds),
+                |row| row
+                    .get(coord.1)
+                    .map_or(
+                        Err(Error::OutOfBounds),
+                        |cell| Ok(Some(*cell)),
+                    ),
+            )
     }
 }
 
