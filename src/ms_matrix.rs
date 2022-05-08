@@ -1,4 +1,4 @@
-use crate::mine_sweeper::{Cell, CellContent, CellState, Coordinate, Error, Result,MineSweeper};
+use crate::mine_sweeper::{Cell, CellContent, CellState, Coordinate, Error, Result, MineSweeper};
 use crate::utils::iter_neighbors;
 use rand::Rng;
 use std::fmt::{Display, Formatter};
@@ -40,7 +40,7 @@ impl GridMatrix {
 
 impl MineSweeper for GridMatrix {
     fn new(width: usize, height: usize, mines: usize) -> Self {
-        let cells = vec![vec![Cell::new(); width]; height];
+        let cells = vec![vec![Cell::default(); width]; height];
         let mut result = GridMatrix {
             width,
             height,
@@ -57,13 +57,14 @@ impl MineSweeper for GridMatrix {
             match self.cells[x][y].state {
                 CellState::Closed => {
                     self.cells[x][y].state = CellState::Open;
-                    if let CellContent::Mine = self.cells[x][y].content {
-                        return Ok(Some(CellContent::Mine));
-                    }
-                    // if let (CellContent::Number(0), = self.cells[x][y].content || iter_neighbors((x, y), self.width, self.height){
-                    //
+                    Ok(Some(self.cells[x][y].content))
+                    // if let CellContent::Mine = self.cells[x][y].content {
+                    //     return Ok(Some(CellContent::Mine));
                     // }
-                    todo!()
+                    // // if let (CellContent::Number(0), = self.cells[x][y].content || iter_neighbors((x, y), self.width, self.height){
+                    // //
+                    // // }
+                    // todo!()
                 }
                 _ => Ok(None),
             }
@@ -87,12 +88,15 @@ impl MineSweeper for GridMatrix {
 
 impl Display for GridMatrix {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for row in &self.cells {
-            for cell in row {
-                write!(f, "{}", cell)?;
-            }
-            writeln!(f)?;
-        }
+        write!(
+            f, "{}",
+            self.cells.iter()
+                .map(|row| row
+                    .iter()
+                    .map(|cell| cell.to_string())
+                    .collect::<Vec<String>>().join(" "))
+                .collect::<Vec<String>>().join("\n")
+        )?;
         Ok(())
     }
 }
