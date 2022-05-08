@@ -2,6 +2,7 @@ use crate::mine_sweeper::{Cell, CellContent, CellState, Coordinate, Error, Resul
 use crate::utils::iter_neighbors;
 use rand::Rng;
 use std::fmt::{Display, Formatter};
+use crate::MineSweeperUtils;
 
 
 /// A grid using a matrix of cells.
@@ -14,7 +15,7 @@ pub struct GridMatrix {
 }
 
 
-impl GridMatrix {
+impl MineSweeperUtils for GridMatrix {
     fn randomize_mines(&mut self, mines: usize) {
         let mut rng = rand::thread_rng();
         let mut mines_left = mines;
@@ -57,7 +58,6 @@ impl MineSweeper for GridMatrix {
             match self.cells[x][y].state {
                 CellState::Closed => {
                     self.cells[x][y].state = CellState::Open;
-                    Ok(Some(self.cells[x][y].content))
                     // if let CellContent::Mine = self.cells[x][y].content {
                     //     return Ok(Some(CellContent::Mine));
                     // }
@@ -65,6 +65,7 @@ impl MineSweeper for GridMatrix {
                     // //
                     // // }
                     // todo!()
+                    Ok(Some(self.cells[x][y].content))
                 }
                 _ => Ok(None),
             }
@@ -72,7 +73,11 @@ impl MineSweeper for GridMatrix {
     }
 
     fn toggle_flag(&mut self, (x, y): Coordinate) -> Result<Option<CellState>> {
-        todo!()
+        if x >= self.width || y >= self.height {
+            Err(Error::OutOfBounds)
+        } else {
+            todo!()
+        }
     }
 
     fn get_cell(&self, coord: Coordinate) -> Result<Option<Cell>> {

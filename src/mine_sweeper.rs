@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
 
+
+
 pub type Coordinate = (usize, usize);
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -100,4 +102,10 @@ pub trait MineSweeper {
     fn toggle_flag(&mut self, coord: Coordinate) -> Result<Option<CellState>>;
     fn get_cell(&self, coord: Coordinate) -> Result<Option<Cell>>;
 }
-//⬛🟩🟧🟨🟫⬜🟪🟦🟥
+
+
+/// Provides utility methods for minesweeper implementations.
+pub(crate) trait MineSweeperUtils {
+    fn randomize_mines(&mut self, mines: usize);
+    fn increment_neighbors(&mut self, coord: Coordinate);
+}
