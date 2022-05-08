@@ -1,9 +1,15 @@
 [package]
 name = "mine_sweeperr"
-version = "0.1.0"
+version = "0.0.0"
+license = "Apache-2.0"
+authors = ["Princic-1837592 <andreapri.99@gmail.com>"]
+description = "Minimalist interface to manage the backed of a Minesweeper game"
+repository = "https://github.com/Princic-1837592/mine_sweeperr"
+keywords = ["mine", "sweeper", "minesweeper"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+doctest = false
 
 [dependencies]
 rand = "0.8.5"

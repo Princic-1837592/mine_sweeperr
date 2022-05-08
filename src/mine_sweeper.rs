@@ -9,6 +9,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Error {
     OutOfBounds,
+    Flagged,
+    TooManyMines,
 }
 
 
@@ -82,9 +84,9 @@ impl Display for Cell {
 ///
 /// Provides methods to create a new instance, to open and flag cells
 /// and to access the content and the state of a cell.
-pub trait MineSweeper {
+pub trait MineSweeper: Sized {
     /// Creates a new instance of the game.
-    fn new(width: usize, height: usize, mines: usize) -> Self;
+    fn new(height: usize, width: usize, mines: usize) -> Result<Self>;
     /// Tries to open a cell.
     ///
     /// Returns [`an error`](Error::OutOfBounds) if the given coordinate is out of bounds.
@@ -101,10 +103,18 @@ pub trait MineSweeper {
 }
 
 
-/// Provides utility methods for minesweeper implementations.
+/// Provides utility methods for [`Minesweeper`](MineSweeper) implementations.
+///
+/// It's not necessary to implement this trait,
+/// but it offers some useful hints about some private methods that can be used to manage the board.
+/// Some of them may be useless for some implementations.
 pub trait MineSweeperUtils {
-    /// Use this function to randomize the positions of mines. Useful when initializing a board.
+    /// Randomizes the positions of mines. Useful when initializing a board.
     fn randomize_mines(&mut self, mines: usize);
-    /// Use this function to increment the value of a non-mine cell. Useful when initializing a board.
+    /// Increments the value of a non-mine cell. Useful when initializing a board.
     fn increment_neighbors(&mut self, coord: Coordinate);
+    /// Counts the number of flags around a cell. Useful to propagate when opening a cell.
+    fn count_neighboring_flags(&self, coord: Coordinate) -> u8;
+    /// Counts the number of mines around a cell.
+    fn count_neighboring_mines(&self, coord: Coordinate) -> usize;
 }
