@@ -63,7 +63,7 @@ impl MineSweeper for GridMatrix {
                     // if let (CellContent::Number(0), = self.cells[x][y].content || iter_neighbors((x, y), self.width, self.height){
                     //
                     // }
-                    unimplemented!()
+                    todo!()
                 }
                 _ => Ok(None),
             }

@@ -51,11 +51,12 @@ impl Display for Cell {
     /// Prints a cell as an emoji: `⬛` for closed cells, `💣` for bomb cells and `🚩` for flagged cells.
     /// Prints a simple number if the cell is open and contains a positive number, or "⬜" if the number is 0.
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        // static NUMBERS: [&str; 9] = ["  ", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"];
         match self.state {
-            CellState::Closed => write!(f, "⬛"),
+            CellState::Closed => write!(f, "⬛ "),
             CellState::Open => match self.content {
-                CellContent::Mine => write!(f, "💣"),
-                CellContent::Number(n) => write!(f, "{}", if n == 0 { "⬜" } else { n.to_string() }),
+                CellContent::Mine => write!(f, "💣 "),
+                CellContent::Number(n) => write!(f, " {} ", n),
             },
             CellState::Flagged => write!(f, "🚩"),
         }
