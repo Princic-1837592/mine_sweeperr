@@ -2,7 +2,7 @@ use crate::mine_sweeper::{Cell, CellContent, CellState, Coordinate, Error, Resul
 use crate::utils::iter_neighbors;
 use rand::Rng;
 use std::fmt::{Display, Formatter};
-use crate::MineSweeperUtils;
+use crate::{MineSweeperUtils, OpenResult};
 use std::collections::VecDeque;
 
 
@@ -40,7 +40,7 @@ impl MineSweeperUtils for MSMatrix {
 
     fn count_neighboring_flags(&self, coord: Coordinate) -> u8 {
         iter_neighbors(coord, self.height, self.width)
-            .filter(|coord| self.cells[coord.0][coord.1].state == CellState::Flagged)
+            .filter(|(x, y)| self.cells[*x][*y].state == CellState::Flagged)
             .count() as u8
     }
 
@@ -56,6 +56,9 @@ impl MineSweeper for MSMatrix {
         if mines >= height * width {
             return Err(Error::TooManyMines);
         }
+        if width == 0 || height == 0 {
+            return Err(Error::InvalidParameters);
+        }
         let cells = vec![vec![Cell::default(); width]; height];
         let mut result = MSMatrix {
             width,
@@ -66,32 +69,38 @@ impl MineSweeper for MSMatrix {
         Ok(result)
     }
 
-    fn open(&mut self, coord @ (x, y): Coordinate) -> Result<Option<CellContent>> {
-        todo!();
+    /// Implements all the additional rules suggested in the [`trait interface`](MineSweeper::open).
+    ///
+    /// The opening procedure is made using a [`queue`](VecDeque) of [`coordinates`](Coordinate),
+    /// in which safe neighboring cells are added when opening a safe cell.
+    fn open(&mut self, coord @ (x, y): Coordinate) -> Result<OpenResult> {
         if x >= self.height || y >= self.width {
             Err(Error::OutOfBounds)
         } else {
-            match self.cells[x][y].state {
-                CellState::Closed => {
-                    let queue = VecDeque::from([coord]);
-
-                    println!("Opening cell at ({}, {})", x, y);
-                    self.cells[x][y].state = CellState::Open;
-                    if let CellContent::Mine = self.cells[x][y].content {
-                        return Ok(Some(CellContent::Mine));
-                    }
-                    if let CellContent::Number(mines) = self.cells[x][y].content {
-                        if mines == self.count_neighboring_flags(coord) {
-                            let queue = VecDeque::from(iter_neighbors(coord, self.height, self.width).collect::<Vec<Coordinate>>());
-                            while !queue.is_empty(){
-
+            let (mut cells_opened, mut mines_found, mut flags_touched) = (0_usize, 0_usize, 0_usize);
+            let mut queue = VecDeque::from([coord]);
+            while !queue.is_empty() {
+                let coord @ (x, y) = queue.pop_front().unwrap();
+                match self.cells[x][y].state {
+                    CellState::Closed => {
+                        self.cells[x][y].state = CellState::Open;
+                        cells_opened += 1;
+                        if let CellContent::Mine = self.cells[x][y].content {
+                            mines_found += 1;
+                        }
+                        if let CellContent::Number(neighboring_mines) = self.cells[x][y].content {
+                            if self.count_neighboring_flags(coord) >= neighboring_mines {
+                                iter_neighbors((x, y), self.height, self.width)
+                                    .filter(|(x, y)| self.cells[*x][*y].state == CellState::Closed)
+                                    .for_each(|coord| queue.push_back(coord));
                             }
                         }
                     }
-                    Ok(Some(self.cells[x][y].content))
+                    CellState::Flagged => flags_touched += 1,
+                    _ => (),
                 }
-                _ => Ok(None),
             }
+            Ok(OpenResult::new(self.cells[x][y], cells_opened, mines_found, flags_touched))
         }
     }
 
@@ -113,7 +122,7 @@ impl MineSweeper for MSMatrix {
         }
     }
 
-    fn get_cell(&self, (x, y): Coordinate) -> Result<Option<Cell>> {
+    fn get_cell(&self, (x, y): Coordinate) -> Result<Cell> {
         self.cells
             .get(x)
             .map_or(
@@ -122,7 +131,7 @@ impl MineSweeper for MSMatrix {
                     .get(y)
                     .map_or(
                         Err(Error::OutOfBounds),
-                        |cell| Ok(Some(*cell)),
+                        |&cell| Ok(cell),
                     ),
             )
     }
@@ -137,7 +146,7 @@ impl Display for MSMatrix {
                 .map(|row| row
                     .iter()
                     .map(|cell| cell.to_string())
-                    .collect::<Vec<String>>().join(" "))
+                    .collect::<Vec<String>>().join(""))
                 .collect::<Vec<String>>().join("\n")
         )?;
         Ok(())

@@ -1,7 +1,7 @@
 use crate::mine_sweeper::Coordinate;
 
 
-pub(crate) fn iter_neighbors((x, y): Coordinate, height: usize, width: usize) -> impl Iterator<Item = Coordinate> {
+pub(crate) fn iter_neighbors(coord @ (x, y): Coordinate, height: usize, width: usize) -> impl Iterator<Item = Coordinate> {
     if x >= height || y >= width {
         unreachable!("Trying to iter neighbors out of bounds");
     }
@@ -12,5 +12,5 @@ pub(crate) fn iter_neighbors((x, y): Coordinate, height: usize, width: usize) ->
                     .map(move |j| (i, j))
             }
         )
-        .filter(move |&pos| pos != (x, y))
+        .filter(move |&pos| pos != coord)
 }
