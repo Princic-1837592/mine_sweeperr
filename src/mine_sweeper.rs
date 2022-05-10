@@ -139,5 +139,6 @@ pub trait MineSweeper: Sized {
     /// and [`AlreadyOpen`](Error::AlreadyOpen) if the cell is already open.
     /// Otherwise returns the new state of the given cell.
     fn toggle_flag(&mut self, coord: Coordinate) -> Result<CellState>;
+    /// Returns the state of the given cell.
     fn get_cell(&self, coord: Coordinate) -> Result<Cell>;
 }

@@ -1,6 +1,6 @@
 //! # Mine sweeper
 //!
-//! A minimalist interface to manage the backend of a minesweeper game.
+//! A minimalist interface to manage the backend of a Minesweeper game.
 
 
 mod mine_sweeper;
