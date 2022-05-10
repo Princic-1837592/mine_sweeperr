@@ -135,7 +135,13 @@ pub trait MineSweeper: Sized {
     ///
     /// Returns [`TooManyMines`](Error::TooManyMines) if the number of mines is greater than the number of cells.
     /// Returns [`InvalidParameters`](Error::InvalidParameters) if the number of rows or columns is 0.
-    fn new(height: usize, width: usize, mines: usize) -> Result<Self>;
+    /// If not overridden, the default rng used is [`rand::thread_rng()`](rand::thread_rng()).
+    fn new(height: usize, width: usize, mines: usize) -> Result<Self> {
+        Self::from_rng(height, width, mines, &mut rand::thread_rng())
+    }
+    /// Creates a new instance of the game using the given random generator.
+    /// Can be used to test the game or to reproduce a specific game by passing a seeded rng.
+    fn from_rng(height: usize, width: usize, mines: usize, rng: &mut impl rand::Rng) -> Result<Self>;
     /// Tries to open a cell.
     ///
     /// Returns an error if the cell is out of bounds,
@@ -163,12 +169,38 @@ pub trait MineSweeper: Sized {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
-    use rand::Rng;
+    use rand::{Rng, SeedableRng, rngs::StdRng};
     use crate::{CellContent, MineSweeper, MSHash, OpenResult, MSMatrix, utils::iter_neighbors};
 
 
     #[test]
-    fn matrix() {
+    fn compare_hash_matrix() {
+        let mut rng = StdRng::seed_from_u64(6);
+        let (h, w, m) = (10, 10, 25);
+        let mut msm = MSMatrix::from_rng(h, w, m, &mut rng.clone()).unwrap();
+        let mut msh = MSHash::from_rng(h, w, m, &mut rng.clone()).unwrap();
+        assert_eq!(msm.to_string(), msh.to_string());
+        for i in 0..h {
+            for j in 0..w {
+                assert_eq!(msm.get_cell((i, j)), msh.get_cell((i, j)));
+                if let CellContent::Mine = msm.get_cell((i, j)).unwrap().content {
+                    if rng.gen_range(0..100) <= -1 {
+                        assert_eq!(msm.toggle_flag((i, j)), msh.toggle_flag((i, j)));
+                    }
+                }
+            }
+        }
+        for i in 0..h {
+            for j in 0..w {
+                assert_eq!(msm.open((i, j)), msh.open((i, j)));
+            }
+        }
+    }
+
+
+    #[test]
+    #[ignore]
+    fn play_matrix() {
         let mut rng = rand::thread_rng();
         let (h, w, m) = (10, 10, 25);
         let mut ms: MSMatrix = MSMatrix::new(h, w, m).unwrap();
@@ -194,7 +226,8 @@ mod tests {
 
 
     #[test]
-    fn hash() {
+    #[ignore]
+    fn play_hash() {
         let mut rng = rand::thread_rng();
         let (h, w, m) = (10, 10, 25);
         let mut ms: MSHash = MSHash::new(h, w, m).unwrap();

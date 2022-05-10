@@ -4,8 +4,6 @@ use rand::Rng;
 use crate::{Cell, CellContent, CellState, Error, iter_neighbors, MineSweeper, OpenResult, Result, Coordinate};
 
 
-/// **TODO: NOT IMPLEMENTED YET**
-///
 /// Represents a grid using [`HashSets`](HashSet) of [`Coordinates`](Coordinate).
 /// Use this when you don't want to load the whole grid in memory at the beginning.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -19,9 +17,19 @@ pub struct MSHash {
 
 
 impl MSHash {
+    /// Creates a new instance.
+    fn new_unchecked(width: usize, height: usize, mines: usize) -> Self {
+        Self {
+            width,
+            height,
+            open: Default::default(),
+            flagged: Default::default(),
+            mines: HashSet::with_capacity(mines),
+        }
+    }
+
     /// Randomizes the positions of mines when initializing the board.
-    fn randomize_mines(&mut self, mines: usize) {
-        let mut rng = rand::thread_rng();
+    fn randomize_mines(&mut self, mines: usize, rng: &mut impl Rng) {
         while self.mines.len() < mines {
             let coord = (rng.gen_range(0..self.height), rng.gen_range(0..self.width));
             if !self.mines.contains(&coord) {
@@ -58,24 +66,21 @@ impl MSHash {
 
 
 impl MineSweeper for MSHash {
-    fn new(height: usize, width: usize, mines: usize) -> Result<Self> {
+    fn from_rng(height: usize, width: usize, mines: usize, rng: &mut impl Rng) -> Result<Self> {
         if mines >= height * width {
             return Err(Error::TooManyMines);
         }
         if width == 0 || height == 0 {
             return Err(Error::InvalidParameters);
         }
-        let mut result = MSHash {
-            width,
-            height,
-            open: Default::default(),
-            flagged: Default::default(),
-            mines: HashSet::with_capacity(mines),
-        };
-        result.randomize_mines(mines);
+        let mut result = Self::new_unchecked(height, width, mines);
+        result.randomize_mines(mines, rng);
         Ok(result)
     }
 
+    /// Implements all the additional rules suggested in the [`trait interface`](MineSweeper::open).
+    ///
+    /// The opening procedure is made using a [`queue`](VecDeque) (not recursive).
     fn open(&mut self, coord: Coordinate) -> Result<OpenResult> {
         self.check_coordinate(coord)?;
         let (mut cells_opened, mut mines_exploded, mut flags_touched) = (0_usize, 0_usize, 0_usize);

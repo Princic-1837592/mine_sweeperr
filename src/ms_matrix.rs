@@ -1,4 +1,4 @@
-use crate::{Cell, CellContent, CellState, Coordinate, Error, Result, MineSweeper,OpenResult,utils::iter_neighbors};
+use crate::{Cell, CellContent, CellState, Coordinate, Error, Result, MineSweeper, OpenResult, utils::iter_neighbors};
 use rand::Rng;
 use std::fmt::{Display, Formatter};
 use std::collections::VecDeque;
@@ -15,9 +15,17 @@ pub struct MSMatrix {
 
 
 impl MSMatrix {
+    /// Creates a new instance.
+    fn new_unchecked(width: usize, height: usize) -> Self {
+        Self {
+            width,
+            height,
+            cells: vec![vec![Cell::default(); width]; height],
+        }
+    }
+
     /// Randomizes the positions of mines when initializing the board.
-    fn randomize_mines(&mut self, mines: usize) {
-        let mut rng = rand::thread_rng();
+    fn randomize_mines(&mut self, mines: usize, rng: &mut impl Rng) {
         let mut mines_left = mines;
         while mines_left > 0 {
             let coord @ (x, y) = (rng.gen_range(0..self.height), rng.gen_range(0..self.width));
@@ -60,20 +68,15 @@ impl MSMatrix {
 
 
 impl MineSweeper for MSMatrix {
-    fn new(height: usize, width: usize, mines: usize) -> Result<Self> {
+    fn from_rng(height: usize, width: usize, mines: usize, rng: &mut impl Rng) -> Result<Self> {
         if mines >= height * width {
             return Err(Error::TooManyMines);
         }
         if width == 0 || height == 0 {
             return Err(Error::InvalidParameters);
         }
-        let cells = vec![vec![Cell::default(); width]; height];
-        let mut result = MSMatrix {
-            width,
-            height,
-            cells,
-        };
-        result.randomize_mines(mines);
+        let mut result = Self::new_unchecked(width, height);
+        result.randomize_mines(mines, rng);
         Ok(result)
     }
 
