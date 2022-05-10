@@ -2,13 +2,13 @@ use crate::mine_sweeper::{Cell, CellContent, CellState, Coordinate, Error, Resul
 use crate::utils::iter_neighbors;
 use rand::Rng;
 use std::fmt::{Display, Formatter};
-use crate::{MineSweeperUtils, OpenResult};
+use crate::OpenResult;
 use std::collections::VecDeque;
 
 
-/// A grid using a matrix of [`cells`](Cell).
+/// Represents the grid using a matrix of [`cells`](Cell).
 /// Use this when you want to load the whole grid in memory at the beginning.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Clone)]
 pub struct MSMatrix {
     width: usize,
     height: usize,
@@ -16,7 +16,8 @@ pub struct MSMatrix {
 }
 
 
-impl MineSweeperUtils for MSMatrix {
+impl MSMatrix {
+    /// Randomizes the positions of mines when initializing the board.
     fn randomize_mines(&mut self, mines: usize) {
         let mut rng = rand::thread_rng();
         let mut mines_left = mines;
@@ -30,23 +31,23 @@ impl MineSweeperUtils for MSMatrix {
         }
     }
 
+    /// Increments the value of all neighboring non-mine cells when initializing the board.
     fn increment_neighbors(&mut self, coord: Coordinate) {
-        iter_neighbors(coord, self.height, self.width).for_each(|(x, y)| {
-            if let CellContent::Number(n) = self.cells[x][y].content {
-                self.cells[x][y].content = CellContent::Number(n + 1);
-            }
-        });
+        iter_neighbors(coord, self.height, self.width)
+            .unwrap()
+            .for_each(|(x, y)| {
+                if let CellContent::Number(n) = self.cells[x][y].content {
+                    self.cells[x][y].content = CellContent::Number(n + 1);
+                }
+            });
     }
 
+    /// Counts the number of flags around a cell to propagate when the opening procedure.
     fn count_neighboring_flags(&self, coord: Coordinate) -> u8 {
         iter_neighbors(coord, self.height, self.width)
+            .unwrap()
             .filter(|(x, y)| self.cells[*x][*y].state == CellState::Flagged)
             .count() as u8
-    }
-
-    /// Unimplemented: useless for this implementation.
-    fn count_neighboring_mines(&self, _: Coordinate) -> usize {
-        unimplemented!()
     }
 }
 
@@ -71,13 +72,12 @@ impl MineSweeper for MSMatrix {
 
     /// Implements all the additional rules suggested in the [`trait interface`](MineSweeper::open).
     ///
-    /// The opening procedure is made using a [`queue`](VecDeque) of [`coordinates`](Coordinate),
-    /// in which safe neighboring cells are added when opening a safe cell.
+    /// The opening procedure is made using a [`queue`](VecDeque) (not recursive).
     fn open(&mut self, coord @ (x, y): Coordinate) -> Result<OpenResult> {
         if x >= self.height || y >= self.width {
             Err(Error::OutOfBounds)
         } else {
-            let (mut cells_opened, mut mines_found, mut flags_touched) = (0_usize, 0_usize, 0_usize);
+            let (mut cells_opened, mut mines_exploded, mut flags_touched) = (0_usize, 0_usize, 0_usize);
             let mut queue = VecDeque::from([coord]);
             while !queue.is_empty() {
                 let coord @ (x, y) = queue.pop_front().unwrap();
@@ -86,11 +86,12 @@ impl MineSweeper for MSMatrix {
                         self.cells[x][y].state = CellState::Open;
                         cells_opened += 1;
                         if let CellContent::Mine = self.cells[x][y].content {
-                            mines_found += 1;
+                            mines_exploded += 1;
                         }
                         if let CellContent::Number(neighboring_mines) = self.cells[x][y].content {
                             if self.count_neighboring_flags(coord) >= neighboring_mines {
                                 iter_neighbors((x, y), self.height, self.width)
+                                    .unwrap()
                                     .filter(|(x, y)| self.cells[*x][*y].state == CellState::Closed)
                                     .for_each(|coord| queue.push_back(coord));
                             }
@@ -100,24 +101,24 @@ impl MineSweeper for MSMatrix {
                     _ => (),
                 }
             }
-            Ok(OpenResult::new(self.cells[x][y], cells_opened, mines_found, flags_touched))
+            Ok(OpenResult::new(self.cells[x][y], cells_opened, mines_exploded, flags_touched))
         }
     }
 
-    fn toggle_flag(&mut self, (x, y): Coordinate) -> Result<Option<CellState>> {
+    fn toggle_flag(&mut self, (x, y): Coordinate) -> Result<CellState> {
         if x >= self.height || y >= self.width {
             Err(Error::OutOfBounds)
         } else {
             match self.cells[x][y].state {
                 CellState::Closed => {
                     self.cells[x][y].state = CellState::Flagged;
-                    Ok(Some(CellState::Flagged))
+                    Ok(CellState::Flagged)
                 }
                 CellState::Flagged => {
                     self.cells[x][y].state = CellState::Closed;
-                    Ok(Some(CellState::Closed))
+                    Ok(CellState::Closed)
                 }
-                _ => Ok(None),
+                _ => Err(Error::AlreadyOpen),
             }
         }
     }

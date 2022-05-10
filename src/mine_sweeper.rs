@@ -1,7 +1,9 @@
 use std::fmt::Display;
 
 
+/// A pair of coordinates. The first coordinate is the row, the second is the column.
 pub type Coordinate = (usize, usize);
+/// The result of some potentially dangerous action.
 pub type Result<T> = std::result::Result<T, Error>;
 
 
@@ -9,10 +11,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Error {
     OutOfBounds,
-    AlreadyFlagged,
-    AlreadyOpened,
+    AlreadyOpen,
     TooManyMines,
-    /// For example if you pass `0` as a dimension for the [`grid`](MineSweeper::new).
     InvalidParameters,
 }
 
@@ -27,17 +27,17 @@ pub enum Error {
 pub struct OpenResult {
     pub cell: Cell,
     pub cells_opened: usize,
-    pub mines_found: usize,
+    pub mines_exploded: usize,
     pub flags_touched: usize,
 }
 
 
 impl OpenResult {
-    pub(crate) fn new(cell: Cell, cells_opened: usize, mines_found: usize, flags_touched: usize) -> Self {
+    pub(crate) fn new(cell: Cell, cells_opened: usize, mines_exploded: usize, flags_touched: usize) -> Self {
         OpenResult {
             cell,
             cells_opened,
-            mines_found,
+            mines_exploded,
             flags_touched,
         }
     }
@@ -116,8 +116,13 @@ impl Display for Cell {
 /// and to access the content and the state of a cell.
 pub trait MineSweeper: Sized {
     /// Creates a new instance of the game.
+    ///
+    /// Returns [`TooManyMines`](Error::TooManyMines) if the number of mines is greater than the number of cells.
+    /// Returns [`InvalidParameters`](Error::InvalidParameters) if the number of rows or columns is 0.
     fn new(height: usize, width: usize, mines: usize) -> Result<Self>;
-    /// Tries to open a cell. Returns an error if the cell is out of bounds,
+    /// Tries to open a cell.
+    ///
+    /// Returns an error if the cell is out of bounds,
     /// otherwise returns an [`OpenResult`](OpenResult).
     ///
     /// The opening procedure should respect the following rules,
@@ -130,26 +135,9 @@ pub trait MineSweeper: Sized {
     fn open(&mut self, coord: Coordinate) -> Result<OpenResult>;
     /// Tries to flag a cell.
     ///
-    /// Returns [`an error`](Error::OutOfBounds) if the given coordinate is out of bounds.
-    /// If the cell is already open or flagged, returns `None`.
-    /// Otherwise returns the content of the flagged cell.
-    fn toggle_flag(&mut self, coord: Coordinate) -> Result<Option<CellState>>;
+    /// Returns [`OutOfBounds`](Error::OutOfBounds) if the given coordinate is out of bounds
+    /// and [`AlreadyOpen`](Error::AlreadyOpen) if the cell is already open.
+    /// Otherwise returns the new state of the given cell.
+    fn toggle_flag(&mut self, coord: Coordinate) -> Result<CellState>;
     fn get_cell(&self, coord: Coordinate) -> Result<Cell>;
-}
-
-
-/// Provides utility methods for [`Minesweeper`](MineSweeper) implementations.
-///
-/// It's not necessary to implement this trait,
-/// but it offers some useful hints about some private methods that can be used to manage the board.
-/// Some of them may be useless for some implementations.
-pub trait MineSweeperUtils {
-    /// Randomizes the positions of mines. Useful when initializing a board.
-    fn randomize_mines(&mut self, mines: usize);
-    /// Increments the value of a non-mine cell. Useful when initializing a board.
-    fn increment_neighbors(&mut self, coord: Coordinate);
-    /// Counts the number of flags around a cell. Useful to propagate when opening a cell.
-    fn count_neighboring_flags(&self, coord: Coordinate) -> u8;
-    /// Counts the number of mines around a cell.
-    fn count_neighboring_mines(&self, coord: Coordinate) -> usize;
 }
