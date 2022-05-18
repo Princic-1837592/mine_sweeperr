@@ -135,6 +135,7 @@ impl MineSweeper for MSMatrix {
 
 
 impl Display for MSMatrix {
+    /// Format with `{:#}`
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f, "{}",

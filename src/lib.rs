@@ -170,7 +170,7 @@ pub trait MineSweeper: Sized {
 mod tests {
     use std::collections::HashSet;
     use rand::{Rng, SeedableRng, rngs::StdRng};
-    use crate::{CellContent, MineSweeper, MSHash, OpenResult, MSMatrix, utils::iter_neighbors};
+    use crate::{CellContent, MineSweeper, MSHash, OpenResult, MSMatrix, utils::{iter_neighbors, get_column_numbers}};
 
 
     #[test]
@@ -214,11 +214,11 @@ mod tests {
             }
         }
         println!("{}\n", ms);
-        let mut _open_result: OpenResult;
+        let mut open_result: OpenResult;
         for i in 0..h {
             for j in 0..w {
-                _open_result = ms.open((i, j)).unwrap();
-                println!("{:?}", _open_result);
+                open_result = ms.open((i, j)).unwrap();
+                println!("{:?}", open_result);
                 println!("{}\n\n", ms);
             }
         }
@@ -279,5 +279,33 @@ mod tests {
         neighbors = iter_neighbors((1, 1), h, w).unwrap().collect();
         assert_eq!(neighbors, HashSet::from([(1, 2), (1, 0), (0, 2), (0, 0), (2, 0), (2, 1), (2, 2), (0, 1)]));
     }
+
+
+    #[test]
+    fn test_column_numbers() {
+        let mut expected: String = String::from("012345678\n");
+        assert_eq!(expected, get_column_numbers(9));
+
+        expected = String::from("0123456789\n");
+        assert_eq!(expected, get_column_numbers(10));
+
+        expected = r#"
+          11111
+012345678901234
+"#[1..].to_string();
+        assert_eq!(expected, get_column_numbers(15));
+
+        expected = r#"
+          111111111122222
+0123456789012345678901234
+"#[1..].to_string();
+        assert_eq!(expected, get_column_numbers(25));
+
+        expected = r#"
+                                                                                                    11111
+          11111111112222222222333333333344444444445555555555666666666677777777778888888888999999999900000
+012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234
+"#[1..].to_string();
+        assert_eq!(expected, get_column_numbers(105));
+    }
 }
-//
