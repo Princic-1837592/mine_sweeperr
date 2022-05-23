@@ -112,13 +112,13 @@ impl Default for Cell {
 impl Display for Cell {
     /// Prints a cell as an emoji: 🟪 for closed cells, 🟥 for bomb cells and 🟨 for flagged cells.
     /// Prints a number if the cell is open and contains a positive number, or 🟩 if the number is 0.
+    // some options are: 🟩 🟨 🟦 🟫 🟧 🟪 🟥
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        static NUMBERS: [&str; 9] = ["🟩", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"];
         match self.state {
             CellState::Closed => write!(f, "🟪"),
             CellState::Open => match self.content {
                 CellContent::Mine => write!(f, "🟥"),
-                CellContent::Number(n) => write!(f, "{}", NUMBERS[n as usize]),
+                CellContent::Number(n) => write!(f, "{}", if n != 0 { NUMBERS[n as usize] } else { NUMBERS[10] }),
             },
             CellState::Flagged => write!(f, "🟨"),
         }
@@ -170,7 +170,7 @@ pub trait MineSweeper: Sized {
 mod tests {
     use std::collections::HashSet;
     use rand::{Rng, SeedableRng, rngs::StdRng};
-    use crate::{CellContent, MineSweeper, MSHash, OpenResult, MSMatrix, utils::{iter_neighbors, get_column_numbers}};
+    use crate::{CellContent, MineSweeper, MSHash, OpenResult, MSMatrix, iter_neighbors, get_column_numbers};
 
 
     #[test]
@@ -199,7 +199,7 @@ mod tests {
 
 
     #[test]
-    #[ignore]
+    // #[ignore]
     fn play_matrix() {
         let mut rng = rand::thread_rng();
         let (h, w, m) = (10, 10, 25);
@@ -213,20 +213,20 @@ mod tests {
                 }
             }
         }
-        println!("{}\n", ms);
+        println!("{:#}\n", ms);
         let mut open_result: OpenResult;
         for i in 0..h {
             for j in 0..w {
                 open_result = ms.open((i, j)).unwrap();
-                println!("{:?}", open_result);
-                println!("{}\n\n", ms);
+                // println!("{:?}", open_result);
+                // println!("{}\n\n", ms);
             }
         }
     }
 
 
     #[test]
-    #[ignore]
+    // #[ignore]
     fn play_hash() {
         let mut rng = rand::thread_rng();
         let (h, w, m) = (10, 10, 25);
@@ -241,12 +241,12 @@ mod tests {
             }
         }
         println!("{}\n", ms);
-        let mut _open_result: OpenResult;
+        let mut open_result: OpenResult;
         for i in 0..h {
             for j in 0..w {
-                _open_result = ms.open((i, j)).unwrap();
-                println!("{:?}", _open_result);
-                println!("{}\n\n", ms);
+                open_result = ms.open((i, j)).unwrap();
+                // println!("{:?}", open_result);
+                // println!("{}\n\n", ms);
             }
         }
     }
@@ -283,29 +283,38 @@ mod tests {
 
     #[test]
     fn test_column_numbers() {
-        let mut expected: String = String::from("012345678\n");
-        assert_eq!(expected, get_column_numbers(9));
+        let mut expected = r#"
+🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣
 
-        expected = String::from("0123456789\n");
-        assert_eq!(expected, get_column_numbers(10));
+"#[1..].to_string();
+        assert_eq!(expected, get_column_numbers(9, 9));
 
         expected = r#"
-          11111
-012345678901234
+🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣
+
 "#[1..].to_string();
-        assert_eq!(expected, get_column_numbers(15));
+        assert_eq!(expected, get_column_numbers(10, 10));
 
         expected = r#"
-          111111111122222
-0123456789012345678901234
+🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣1️⃣1️⃣1️⃣
+🟫🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣
+
 "#[1..].to_string();
-        assert_eq!(expected, get_column_numbers(25));
+        assert_eq!(expected, get_column_numbers(15, 15));
 
         expected = r#"
-                                                                                                    11111
-          11111111112222222222333333333344444444445555555555666666666677777777778888888888999999999900000
-012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234
+🟫🟫🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣2️⃣2️⃣2️⃣2️⃣2️⃣
+🟫🟫🟫🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣
+
 "#[1..].to_string();
-        assert_eq!(expected, get_column_numbers(105));
+        assert_eq!(expected, get_column_numbers(1250, 25));
+
+        expected = r#"
+🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣1️⃣1️⃣1️⃣
+🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣0️⃣0️⃣0️⃣0️⃣0️⃣
+🟫🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣
+
+"#[1..].to_string();
+        assert_eq!(expected, get_column_numbers(11, 105));
     }
 }

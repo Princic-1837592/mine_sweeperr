@@ -1,4 +1,4 @@
-use crate::{Cell, CellContent, CellState, Coordinate, Error, Result, MineSweeper, OpenResult, utils::iter_neighbors};
+use crate::{Cell, CellContent, CellState, Coordinate, Error, Result, MineSweeper, OpenResult, iter_neighbors, get_column_numbers, ROW_NUMBER_RIGHT_SEPARATOR, get_row_number};
 use rand::Rng;
 use std::fmt::{Display, Formatter};
 use std::collections::VecDeque;
@@ -135,15 +135,30 @@ impl MineSweeper for MSMatrix {
 
 
 impl Display for MSMatrix {
-    /// Format with `{:#}`
+    /// Displays the grid in a human-readable format as a grid of emojis representing cells.
+    ///
+    /// Can be formatted passing the `#` option:
+    /// in that case, row numbers will be shown on the left and column numbers on the top.
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let print_numbers = f.alternate();
+        let max_height_digits = (self.height - 1).to_string().len();
         write!(
-            f, "{}",
-            self.cells.iter()
-                .map(|row| row
+            f, "{}{}",
+            if print_numbers { get_column_numbers(self.height, self.width) } else { String::from("") },
+            self.cells
+                .iter()
+                .enumerate()
+                .map(|(i, row)| row
                     .iter()
                     .map(|cell| cell.to_string())
-                    .collect::<Vec<String>>().join(""))
+                    .fold(
+                        {
+                            let mut s = if print_numbers { format!("{}{}", get_row_number(i, max_height_digits), ROW_NUMBER_RIGHT_SEPARATOR) } else { String::from("") };
+                            s.reserve(self.width);
+                            s
+                        },
+                        |acc, s| acc + &s,
+                    ))
                 .collect::<Vec<String>>().join("\n")
         )
     }
