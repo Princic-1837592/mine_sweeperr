@@ -17,7 +17,7 @@ pub(crate) struct RngWrapper;
 
 
 #[cfg(target_family = "wasm")]
-pub(crate) impl Rng for RngWrapper {}
+impl Rng for RngWrapper {}
 
 
 #[cfg(target_family = "wasm")]
@@ -35,6 +35,6 @@ extern "C" {
 
 
 #[cfg(target_family = "wasm")]
-pub(crate) fn random_range(_: &mut impl Rng, min: usize, max: usize) -> usize {
+pub(crate) fn gen_range(_: &mut impl Rng, min: usize, max: usize) -> usize {
     (random() * (max - min) as f64).floor() as usize + min
 }
