@@ -13,3 +13,4 @@ doctest = false
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 rand = "0.8.5"
+wasm-bindgen = "0.2.80"
