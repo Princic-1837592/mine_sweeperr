@@ -26,8 +26,8 @@ pub(crate) fn thread_rng() -> RngWrapper {
 }
 
 
-#[wasm_bindgen]
 #[cfg(target_family = "wasm")]
+#[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = Math)]
     fn random() -> f64;
