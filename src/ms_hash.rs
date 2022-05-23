@@ -1,8 +1,8 @@
 use std::collections::{HashSet, VecDeque};
 use std::fmt::{Display, Formatter};
-use rand::Rng;
 use crate::{Cell, CellContent, CellState, Error, iter_neighbors, MineSweeper, OpenResult, Result,
-            Coordinate, get_column_numbers, get_row_number, ROW_NUMBER_RIGHT_SEPARATOR};
+            Coordinate, get_column_numbers, get_row_number, ROW_NUMBER_RIGHT_SEPARATOR,
+            random::{Rng, gen_range}};
 
 
 /// Represents a grid using [`HashSets`](HashSet) of [`Coordinates`](Coordinate).
@@ -32,7 +32,7 @@ impl MSHash {
     /// Randomizes the positions of mines when initializing the board.
     fn randomize_mines(&mut self, mines: usize, rng: &mut impl Rng) {
         while self.mines.len() < mines {
-            let coord = (rng.gen_range(0..self.height), rng.gen_range(0..self.width));
+            let coord = (gen_range(rng, 0, self.height), gen_range(rng, 0, self.width));
             if !self.mines.contains(&coord) {
                 self.mines.insert(coord);
             }

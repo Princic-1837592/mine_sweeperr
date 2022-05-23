@@ -6,6 +6,7 @@
 mod ms_hash;
 mod ms_matrix;
 mod utils;
+mod random;
 
 
 use std::fmt::Display;
@@ -137,11 +138,12 @@ pub trait MineSweeper: Sized {
     /// Returns [`InvalidParameters`](Error::InvalidParameters) if the number of rows or columns is 0.
     /// If not overridden, the default rng used is [`rand::thread_rng()`](rand::thread_rng()).
     fn new(height: usize, width: usize, mines: usize) -> Result<Self> {
-        Self::from_rng(height, width, mines, &mut rand::thread_rng())
+        Self::from_rng(height, width, mines, &mut random::thread_rng())
     }
     /// Creates a new instance of the game using the given random generator.
     /// Can be used to test the game or to reproduce a specific game by passing a seeded rng.
-    fn from_rng(height: usize, width: usize, mines: usize, rng: &mut impl rand::Rng) -> Result<Self>;
+    #[cfg(not(target_family = "wasm"))]
+    fn from_rng(height: usize, width: usize, mines: usize, rng: &mut impl random::Rng) -> Result<Self>;
     /// Tries to open a cell.
     ///
     /// Returns an error if the cell is out of bounds,
@@ -204,6 +206,8 @@ mod tests {
 
     #[test]
     // #[ignore]
+    #[allow(unused_variables)]
+    #[allow(unused_assignments)]
     fn play_matrix() {
         let mut rng = rand::thread_rng();
         let (h, w, m) = (10, 10, 25);
@@ -231,6 +235,8 @@ mod tests {
 
     #[test]
     // #[ignore]
+    #[allow(unused_variables)]
+    #[allow(unused_assignments)]
     fn play_hash() {
         let mut rng = rand::thread_rng();
         let (h, w, m) = (10, 10, 25);

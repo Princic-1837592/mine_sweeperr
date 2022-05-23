@@ -11,5 +11,5 @@ edition = "2021"
 [lib]
 doctest = false
 
-[dependencies]
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
 rand = "0.8.5"

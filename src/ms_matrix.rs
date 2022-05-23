@@ -1,7 +1,6 @@
 use crate::{Cell, CellContent, CellState, Coordinate, Error, Result, MineSweeper,
             OpenResult, iter_neighbors, get_column_numbers, ROW_NUMBER_RIGHT_SEPARATOR,
-            get_row_number};
-use rand::Rng;
+            get_row_number, random::{Rng, gen_range}};
 use std::fmt::{Display, Formatter};
 use std::collections::VecDeque;
 
@@ -30,7 +29,7 @@ impl MSMatrix {
     fn randomize_mines(&mut self, mines: usize, rng: &mut impl Rng) {
         let mut mines_left = mines;
         while mines_left > 0 {
-            let coord @ (x, y) = (rng.gen_range(0..self.height), rng.gen_range(0..self.width));
+            let coord @ (x, y) = (gen_range(rng, 0, self.height), gen_range(rng, 0, self.width));
             if let CellContent::Number(_) = self.cells[x][y].content {
                 self.cells[x][y].content = CellContent::Mine;
                 self.increment_neighbors(coord);
