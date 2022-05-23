@@ -69,7 +69,6 @@ impl MSMatrix {
 
 
 impl MineSweeper for MSMatrix {
-    #[cfg(not(target_family = "wasm"))]
     fn from_rng(height: usize, width: usize, mines: usize, rng: &mut impl Rng) -> Result<Self> {
         if mines >= height * width {
             return Err(Error::TooManyMines);
