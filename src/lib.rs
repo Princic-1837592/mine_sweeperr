@@ -170,7 +170,8 @@ pub trait MineSweeper: Sized {
 mod tests {
     use std::collections::HashSet;
     use rand::{Rng, SeedableRng, rngs::StdRng};
-    use crate::{CellContent, MineSweeper, MSHash, OpenResult, MSMatrix, iter_neighbors, get_column_numbers};
+    use crate::{CellContent, MineSweeper, MSHash, OpenResult, MSMatrix,
+                iter_neighbors, get_column_numbers};
 
 
     #[test]
@@ -184,15 +185,18 @@ mod tests {
             for j in 0..w {
                 assert_eq!(msm.get_cell((i, j)), msh.get_cell((i, j)));
                 if let CellContent::Mine = msm.get_cell((i, j)).unwrap().content {
-                    if rng.gen_range(0..100) <= -1 {
+                    if rng.gen_range(0..100) <= 100 {
                         assert_eq!(msm.toggle_flag((i, j)), msh.toggle_flag((i, j)));
                     }
                 }
             }
         }
+        assert_eq!(format!("{:#}", msm), format!("{:#}", msh));
+        // opening the whole grid and comparing strings could take a lot of time for big grids
         for i in 0..h {
             for j in 0..w {
                 assert_eq!(msm.open((i, j)), msh.open((i, j)));
+                assert_eq!(format!("{:#}", msm), format!("{:#}", msh));
             }
         }
     }
@@ -240,7 +244,7 @@ mod tests {
                 }
             }
         }
-        println!("{}\n", ms);
+        println!("{:#}\n", ms);
         let mut open_result: OpenResult;
         for i in 0..h {
             for j in 0..w {

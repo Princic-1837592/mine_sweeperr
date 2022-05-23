@@ -1,4 +1,6 @@
-use crate::{Cell, CellContent, CellState, Coordinate, Error, Result, MineSweeper, OpenResult, iter_neighbors, get_column_numbers, ROW_NUMBER_RIGHT_SEPARATOR, get_row_number};
+use crate::{Cell, CellContent, CellState, Coordinate, Error, Result, MineSweeper,
+            OpenResult, iter_neighbors, get_column_numbers, ROW_NUMBER_RIGHT_SEPARATOR,
+            get_row_number};
 use rand::Rng;
 use std::fmt::{Display, Formatter};
 use std::collections::VecDeque;
@@ -147,19 +149,26 @@ impl Display for MSMatrix {
             if print_numbers { get_column_numbers(self.height, self.width) } else { String::from("") },
             self.cells
                 .iter()
-                .enumerate()
-                .map(|(i, row)| row
+                .map(|row| row
                     .iter()
-                    .map(|cell| cell.to_string())
-                    .fold(
-                        {
-                            let mut s = if print_numbers { format!("{}{}", get_row_number(i, max_height_digits), ROW_NUMBER_RIGHT_SEPARATOR) } else { String::from("") };
-                            s.reserve(self.width);
-                            s
-                        },
-                        |acc, s| acc + &s,
-                    ))
-                .collect::<Vec<String>>().join("\n")
+                    .map(ToString::to_string)
+                    .collect::<String>())
+                .enumerate()
+                .map(|(i, s)| format!(
+                    "{}{}",
+                    if print_numbers {
+                        format!(
+                            "{}{}",
+                            get_row_number(i, max_height_digits),
+                            ROW_NUMBER_RIGHT_SEPARATOR
+                        )
+                    } else {
+                        String::from("")
+                    },
+                    s
+                ))
+                .collect::<Vec<String>>()
+                .join("\n")
         )
     }
 }
