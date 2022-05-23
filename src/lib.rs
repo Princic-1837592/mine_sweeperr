@@ -1,6 +1,10 @@
 //! # Mine sweeper
 //!
 //! A minimalist interface to manage the backend of a Minesweeper game.
+//!
+//! This crate supports [wasm](https://crates.io/crates/wasm-bindgen) but, in that case,
+//! seeded random generators are not allowed due to incompatibility.
+//! Maybe in future versions some kind of trick will be implemented to make it work.
 
 
 mod ms_hash;
