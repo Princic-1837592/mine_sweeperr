@@ -13,7 +13,7 @@ use wasm_bindgen::prelude::*;
 
 
 #[cfg(target_family = "wasm")]
-pub(crate) trait Rng {}
+pub trait Rng {}
 
 
 #[cfg(target_family = "wasm")]
