@@ -142,7 +142,7 @@ pub trait MineSweeper: Sized {
     }
     /// Creates a new instance of the game using the given random generator.
     /// Can be used to test the game or to reproduce a specific game by passing a seeded rng.
-    // #[cfg(not(target_family = "wasm"))]
+    #[cfg(not(target_family = "wasm"))]
     fn from_rng(height: usize, width: usize, mines: usize, rng: &mut impl random::Rng) -> Result<Self>;
     /// Tries to open a cell.
     ///
