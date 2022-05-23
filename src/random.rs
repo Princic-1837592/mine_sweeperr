@@ -21,7 +21,7 @@ use wasm_bindgen::prelude::*;
 
 #[cfg(target_family = "wasm")]
 pub trait Rng {
-    fn gen_range(&mut self, range: std::ops::Range<usize>) -> usize {
+    fn gen_range(&mut self, min: usize, max: usize) -> usize {
         (random() * (max - min) as f64).floor() as usize + min
     }
 }
