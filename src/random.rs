@@ -9,6 +9,10 @@ pub(crate) fn gen_range(rng: &mut impl Rng, min: usize, max: usize) -> usize {
 
 
 #[cfg(target_family = "wasm")]
+use wasm_bindgen::prelude::*;
+
+
+#[cfg(target_family = "wasm")]
 pub(crate) trait Rng {}
 
 
