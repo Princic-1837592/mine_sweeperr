@@ -4,7 +4,7 @@ pub(crate) use rand::{thread_rng, Rng};
 
 #[cfg(not(target_family = "wasm"))]
 pub(crate) fn gen_range(rng: &mut impl Rng, range: std::ops::Range<usize>) -> usize {
-    rng.gen_range(range.start..range.end)
+    rng.gen_range(range)
 }
 
 

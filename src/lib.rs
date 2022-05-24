@@ -2,15 +2,18 @@
 //!
 //! A minimalist interface to manage the backend of a mine sweeper game.
 //!
-//! Import [`MineSweeper`](MineSweeper) and one of its implementations ([`MSMatrix`](MSMatrix) or [`MSHash`](MSHash)) to use it.
+//! Import [`MineSweeper`](MineSweeper) and one of its implementations
+//! ([`MSMatrix`](MSMatrix) or [`MSHash`](MSHash)) to use it.
 //! You can also create your own implementation, if you prefer:
-//! this crate already defines the needed functions and types to create and manage a mine sweeper game.
+//! this crate already declares the needed functions and types to create and manage a mine sweeper game.
 //!
 //! <span style="color:red">**IMPORTANT**</span>:
 //! This crate supports [wasm](https://crates.io/crates/wasm-bindgen) but, in that case,
-//! seeded random generators are not allowed due to incompatibility with wasm itself.
+//! seeded random generators (or in general the rand crate) are not allowed
+//! due to incompatibility with wasm itself.
 //! Maybe in future versions some kind of trick will be implemented to make it work.
-//! A working implementation of this library with wasm frontend is available on [my GitHub page](https://Princic-1837592.github.io)
+//! A working implementation of this library with wasm frontend
+//! is available on [my GitHub page](https://Princic-1837592.github.io)
 
 
 mod ms_hash;
@@ -152,8 +155,7 @@ pub trait MineSweeper: Sized {
     }
     /// Creates a new instance of the game using the given random generator.
     /// Can be used to test the game or to reproduce a specific game by passing a seeded rng.
-    /// When using [wasm](https://crates.io/crates/wasm-bindgen) the seeded rng
-    /// will be completely ignored due to incompatibility.
+    /// When using [wasm](https://crates.io/crates/wasm-bindgen) this function can't be used.
     fn from_rng(height: usize, width: usize, mines: usize, rng: &mut impl random::Rng) -> Result<Self>;
     /// Tries to open a cell.
     ///
