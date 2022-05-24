@@ -125,7 +125,7 @@ impl MineSweeper for MSMatrix {
                     if self.count_neighboring_flags(coord) >= neighboring_mines {
                         iter_neighbors((x, y), self.height, self.width)
                             .unwrap()
-                            .filter(|&(x, y)| self.cells[x][y].state == CellState::Closed)
+                            .filter(|&(x, y)| self.cells[x][y].state != CellState::Open)
                             .for_each(|coord| queue.push_back(coord));
                     }
                 }
