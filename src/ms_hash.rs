@@ -100,7 +100,7 @@ impl MineSweeper for MSHash {
                         if self.count_neighboring_flags(coord) >= neighboring_mines {
                             iter_neighbors((x, y), self.height, self.width)
                                 .unwrap()
-                                .filter(|&coord| self.get_cell(coord).unwrap().state != CellState::Open)
+                                .filter(|&coord| self.get_cell(coord).unwrap().state == CellState::Closed)
                                 .for_each(|coord| queue.push_back(coord));
                         }
                     }

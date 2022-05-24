@@ -91,7 +91,7 @@ impl MineSweeper for MSMatrix {
         let mut queue = VecDeque::from([coord]);
         while !queue.is_empty() {
             let coord @ (x, y) = queue.pop_front().unwrap();
-            match self.cells[x][y].state {
+            /*match self.cells[x][y].state {
                 CellState::Closed => {
                     self.cells[x][y].state = CellState::Open;
                     cells_opened += 1;
@@ -109,6 +109,25 @@ impl MineSweeper for MSMatrix {
                 }
                 CellState::Flagged => flags_touched += 1,
                 _ => (),
+            }*/
+            if self.cells[x][y].state == CellState::Flagged {
+                flags_touched += 1;
+            } else {
+                if self.cells[x][y].state == CellState::Closed {
+                    self.cells[x][y].state = CellState::Open;
+                    cells_opened += 1;
+                    if self.cells[x][y].content == CellContent::Mine {
+                        mines_exploded += 1;
+                    }
+                }
+                if let CellContent::Number(neighboring_mines) = self.cells[x][y].content {
+                    if self.count_neighboring_flags(coord) >= neighboring_mines {
+                        iter_neighbors((x, y), self.height, self.width)
+                            .unwrap()
+                            .filter(|&(x, y)| self.cells[x][y].state == CellState::Closed)
+                            .for_each(|coord| queue.push_back(coord));
+                    }
+                }
             }
         }
         Ok(OpenResult::new(self.cells[x][y], cells_opened, mines_exploded, flags_touched))

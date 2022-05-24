@@ -202,7 +202,7 @@ pub trait MineSweeper: Sized {
     ///
     /// The opening procedure should respect the following rules,
     /// that are not enforced by the game but make the user experience better:
-    /// - if the opened cell is a number and is surrounded by enough flags,
+    /// - if the opened cell is a number and it's surrounded by enough flags,
     /// all the neighboring non-flagged cells are considered safe to open
     /// and should therefore be opened
     /// - the opening procedure should not stop at the first mine found,
