@@ -1,8 +1,7 @@
 use std::collections::{HashSet, VecDeque};
 use std::fmt::{Display, Formatter};
 use crate::{Cell, CellContent, CellState, Error, iter_neighbors, MineSweeper, OpenResult, Result,
-            Coordinate, get_column_numbers, get_row_number, ROW_NUMBER_RIGHT_SEPARATOR,
-            random::{Rng, gen_range}};
+            Coordinate, random::{Rng, gen_range}};
 
 
 /// Represents a grid using [`HashSets`](HashSet) of [`Coordinates`](Coordinate).
@@ -156,40 +155,7 @@ impl MineSweeper for MSHash {
 
 
 impl Display for MSHash {
-    /// Displays the grid in a human-readable format as a grid of emojis representing cells.
-    ///
-    /// Can be formatted passing the `#` option:
-    /// in that case, row numbers will be shown on the left and column numbers on the top.
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let print_numbers = f.alternate();
-        let max_height_digits = (self.height - 1).to_string().len();
-        write!(
-            f,
-            "{}{}",
-            if print_numbers { get_column_numbers(self.height, self.width) } else { String::from("") },
-            (0..self.height)
-                .map(|i| (0..self.width)
-                    .map(|j| self
-                        .get_cell((i, j))
-                        .unwrap()
-                        .to_string())
-                    .collect::<String>())
-                .enumerate()
-                .map(|(i, s)| format!(
-                    "{}{}",
-                    if print_numbers {
-                        format!(
-                            "{}{}",
-                            get_row_number(i, max_height_digits),
-                            ROW_NUMBER_RIGHT_SEPARATOR
-                        )
-                    } else {
-                        String::from("")
-                    },
-                    s
-                ))
-                .collect::<Vec<String>>()
-                .join("\n")
-        )
+        MineSweeper::fmt(self, f)
     }
 }

@@ -22,7 +22,7 @@ mod utils;
 mod random;
 
 
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 pub use ms_hash::*;
 pub use ms_matrix::*;
 pub use utils::*;
@@ -184,6 +184,47 @@ pub trait MineSweeper: Sized {
     fn width(&self) -> usize;
     /// Returns the number of mines of the board.
     fn mines(&self) -> usize;
+    /// Displays the grid in a human-readable format as a grid of emojis representing cells.
+    ///
+    /// Can be formatted passing the `#` option:
+    /// in that case, row numbers will be shown on the left and column numbers on the top.
+    ///
+    /// This function relies on the implementation of [`get_cell`](MineSweeper::get_cell),
+    /// [`height`](MineSweeper::height) and [`width`](MineSweeper::width).
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let print_numbers = f.alternate();
+        let max_height_digits = (self.height() - 1).to_string().len();
+        write!(
+            f,
+            "{}{}",
+            if print_numbers { get_column_numbers(self.height(), self.width()) } else { String::from("") },
+            (0..self.height())
+                .map(|i| (0..self.width())
+                    .map(|j| self
+                        .get_cell((i, j))
+                        .unwrap()
+                        .to_string()
+                    )
+                    .collect::<String>()
+                )
+                .enumerate()
+                .map(|(i, s)| format!(
+                    "{}{}",
+                    if print_numbers {
+                        format!(
+                            "{}{}",
+                            get_row_number(i, max_height_digits),
+                            ROW_NUMBER_RIGHT_SEPARATOR
+                        )
+                    } else {
+                        String::from("")
+                    },
+                    s
+                ))
+                .collect::<Vec<String>>()
+                .join("\n")
+        )
+    }
 }
 
 
