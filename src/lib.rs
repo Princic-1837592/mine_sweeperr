@@ -256,11 +256,12 @@ pub trait MineSweeper: Sized {
 mod tests {
     use std::collections::HashSet;
     use rand::{Rng, SeedableRng, rngs::StdRng};
-    use crate::{CellContent, MineSweeper, MSHash, MSMatrix,
-                iter_neighbors, get_column_numbers};
+    use crate::{CellContent, MineSweeper, MSHash, MSMatrix, iter_neighbors, get_column_numbers, OpenResult};
 
 
     #[test]
+    #[allow(unused_variables)]
+    #[allow(unused_assignments)]
     fn compare_hash_matrix() {
         let mut rng = StdRng::seed_from_u64(6);
         let (h, w, m) = (10, 15, 25);
@@ -271,17 +272,21 @@ mod tests {
             for j in 0..w {
                 assert_eq!(msm.get_cell((i, j)), msh.get_cell((i, j)));
                 if let CellContent::Mine = msm.get_cell((i, j)).unwrap().content {
-                    if rng.gen_range(0..100) <= 100 {
+                    if rng.gen_range(0..100) <= 5 {
                         assert_eq!(msm.toggle_flag((i, j)), msh.toggle_flag((i, j)));
                     }
                 }
             }
         }
         assert_eq!(format!("{:#}", msm), format!("{:#}", msh));
+        let (mut msm_open, mut msh_open): (OpenResult, OpenResult);
         // opening the whole grid and comparing strings could take a lot of time for big grids
+        // or when the grid has a lot of flags
         for i in 0..h {
             for j in 0..w {
-                assert_eq!(msm.open((i, j)), msh.open((i, j)));
+                msm_open = msm.open((i, j)).unwrap();
+                msh_open = msh.open((i, j)).unwrap();
+                assert_eq!(msm_open, msh_open);
                 assert_eq!(format!("{:#}", msm), format!("{:#}", msh));
             }
         }

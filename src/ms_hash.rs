@@ -6,6 +6,7 @@ use crate::{Cell, CellContent, CellState, Error, iter_neighbors, MineSweeper, Op
 
 /// Represents a grid using [`HashSets`](HashSet) of [`Coordinates`](Coordinate).
 /// Use this when you don't want to load the whole grid in memory at the beginning.
+/// Has lower performances when opening cells but takes less memory.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MSHash {
     height: usize,
@@ -89,7 +90,7 @@ impl MineSweeper for MSHash {
         while !queue.is_empty() {
             let coord @ (x, y) = queue.pop_front().unwrap();
             cell = self.get_cell(coord).unwrap();
-            match cell.state {
+            /*match cell.state {
                 CellState::Closed => {
                     self.open.insert(coord);
                     cells_opened += 1;
@@ -100,13 +101,32 @@ impl MineSweeper for MSHash {
                         if self.count_neighboring_flags(coord) >= neighboring_mines {
                             iter_neighbors((x, y), self.height, self.width)
                                 .unwrap()
-                                .filter(|&coord| self.get_cell(coord).unwrap().state == CellState::Closed)
+                                .filter(|&coord| self.get_cell(coord).unwrap().state != CellState::Open)
                                 .for_each(|coord| queue.push_back(coord));
                         }
                     }
                 }
                 CellState::Flagged => flags_touched += 1,
                 _ => (),
+            }*/
+            if cell.state == CellState::Flagged {
+                flags_touched += 1;
+            } else {
+                if cell.state == CellState::Closed {
+                    self.open.insert(coord);
+                    cells_opened += 1;
+                    if cell.content == CellContent::Mine {
+                        mines_exploded += 1;
+                    }
+                }
+                if let CellContent::Number(neighboring_mines) = cell.content {
+                    if self.count_neighboring_flags(coord) >= neighboring_mines {
+                        iter_neighbors((x, y), self.height, self.width)
+                            .unwrap()
+                            .filter(|&coord| self.get_cell(coord).unwrap().state == CellState::Closed)
+                            .for_each(|coord| queue.push_back(coord));
+                    }
+                }
             }
         }
         Ok(OpenResult::new(self.get_cell(coord).unwrap(), cells_opened, mines_exploded, flags_touched))

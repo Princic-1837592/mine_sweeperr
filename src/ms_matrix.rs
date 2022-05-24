@@ -6,6 +6,7 @@ use std::collections::VecDeque;
 
 /// Represents the grid using a matrix of [`cells`](Cell).
 /// Use this when you want to load the whole grid in memory at the beginning.
+/// Has higher performances when opening cells but takes more memory.
 #[derive(Debug, Clone)]
 pub struct MSMatrix {
     height: usize,
