@@ -127,9 +127,9 @@ impl Display for Cell {
     /// Prints a cell in a human-readable way.
     ///
     /// If no formatting option is given, the following chars are used:
-    /// - `c` for closed cells
-    /// - `m` for mine cells
-    /// - `f` for flagged cells
+    /// - `C` for closed cells
+    /// - `M` for mine cells
+    /// - `F` for flagged cells
     /// - ` ` (blank space) for cells with a 0
     /// - `1` to `9` for cells with a number
     ///
@@ -162,16 +162,16 @@ impl Display for Cell {
             }
         } else {
             match self.state {
-                CellState::Closed => write!(f, "c"),
+                CellState::Closed => write!(f, "C"),
                 CellState::Open => match self.content {
-                    CellContent::Mine => write!(f, "m"),
+                    CellContent::Mine => write!(f, "M"),
                     CellContent::Number(n) => if n > 0 {
                         write!(f, "{}", n)
                     } else {
                         write!(f, " ")
                     },
                 },
-                CellState::Flagged => write!(f, "f"),
+                CellState::Flagged => write!(f, "F"),
             }
         }
     }
@@ -423,37 +423,37 @@ mod tests {
     fn test_simple_formatter() {
         let mut ms = MSMatrix::new(5, 5, 5).unwrap();
         let mut expected = r#"
-ccccc
-ccccc
-ccccc
-ccccc
-ccccc
+CCCCC
+CCCCC
+CCCCC
+CCCCC
+CCCCC
 "#[1..].to_string();
         assert_eq!(expected, format!("{:}", ms));
 
         ms = MSMatrix::new(5, 11, 5).unwrap();
         expected = r#"
-ccccccccccc
-ccccccccccc
-ccccccccccc
-ccccccccccc
-ccccccccccc
+CCCCCCCCCCC
+CCCCCCCCCCC
+CCCCCCCCCCC
+CCCCCCCCCCC
+CCCCCCCCCCC
 "#[1..].to_string();
         assert_eq!(expected, format!("{:}", ms));
 
         ms = MSMatrix::new(11, 12, 5).unwrap();
         expected = r#"
-cccccccccccc
-cccccccccccc
-cccccccccccc
-cccccccccccc
-cccccccccccc
-cccccccccccc
-cccccccccccc
-cccccccccccc
-cccccccccccc
-cccccccccccc
-cccccccccccc
+CCCCCCCCCCCC
+CCCCCCCCCCCC
+CCCCCCCCCCCC
+CCCCCCCCCCCC
+CCCCCCCCCCCC
+CCCCCCCCCCCC
+CCCCCCCCCCCC
+CCCCCCCCCCCC
+CCCCCCCCCCCC
+CCCCCCCCCCCC
+CCCCCCCCCCCC
 "#[1..].to_string();
         assert_eq!(expected, format!("{:}", ms));
     }
@@ -505,11 +505,11 @@ cccccccccccc
         let mut expected = r#"
    01234
 
-0  ccccc
-1  ccccc
-2  ccccc
-3  ccccc
-4  ccccc
+0  CCCCC
+1  CCCCC
+2  CCCCC
+3  CCCCC
+4  CCCCC
 "#[1..].to_string();
         assert_eq!(expected, format!("{:.0}", ms));
 
@@ -518,11 +518,11 @@ cccccccccccc
              1
    01234567890
 
-0  ccccccccccc
-1  ccccccccccc
-2  ccccccccccc
-3  ccccccccccc
-4  ccccccccccc
+0  CCCCCCCCCCC
+1  CCCCCCCCCCC
+2  CCCCCCCCCCC
+3  CCCCCCCCCCC
+4  CCCCCCCCCCC
 "#[1..].to_string();
         assert_eq!(expected, format!("{:.0}", ms));
 
@@ -531,17 +531,17 @@ cccccccccccc
               11
     012345678901
 
- 0  cccccccccccc
- 1  cccccccccccc
- 2  cccccccccccc
- 3  cccccccccccc
- 4  cccccccccccc
- 5  cccccccccccc
- 6  cccccccccccc
- 7  cccccccccccc
- 8  cccccccccccc
- 9  cccccccccccc
-10  cccccccccccc
+ 0  CCCCCCCCCCCC
+ 1  CCCCCCCCCCCC
+ 2  CCCCCCCCCCCC
+ 3  CCCCCCCCCCCC
+ 4  CCCCCCCCCCCC
+ 5  CCCCCCCCCCCC
+ 6  CCCCCCCCCCCC
+ 7  CCCCCCCCCCCC
+ 8  CCCCCCCCCCCC
+ 9  CCCCCCCCCCCC
+10  CCCCCCCCCCCC
 "#[1..].to_string();
         assert_eq!(expected, format!("{:.0}", ms));
     }
