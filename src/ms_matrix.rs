@@ -165,7 +165,8 @@ impl Display for MSMatrix {
                 .map(|row| row
                     .iter()
                     .map(ToString::to_string)
-                    .collect::<String>())
+                    .collect::<String>()
+                )
                 .enumerate()
                 .map(|(i, s)| format!(
                     "{}{}",
