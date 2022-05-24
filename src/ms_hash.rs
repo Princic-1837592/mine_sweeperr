@@ -78,9 +78,9 @@ impl MineSweeper for MSHash {
         Ok(result)
     }
 
-    /// Implements all the additional rules suggested in the [`trait interface`](MineSweeper::open).
+    /// Implements all the additional rules suggested in the [trait interface](MineSweeper::open).
     ///
-    /// The opening procedure is made using a [`queue`](VecDeque) (not recursive).
+    /// The opening procedure is made using a [queue](VecDeque) (not recursive).
     fn open(&mut self, coord: Coordinate) -> Result<OpenResult> {
         self.check_coordinate(coord)?;
         let (mut cells_opened, mut mines_exploded, mut flags_touched) = (0_usize, 0_usize, 0_usize);

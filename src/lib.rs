@@ -92,7 +92,7 @@ pub enum CellContent {
 
 
 /// A cell with its [`state`](CellState) and [`content`](CellContent).
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct Cell {
     pub state: CellState,
     pub content: CellContent,
@@ -124,17 +124,55 @@ impl Default for Cell {
 
 
 impl Display for Cell {
-    /// Prints a cell as an emoji: 🟪 for closed cells, 🟥 for bomb cells and 🟨 for flagged cells.
-    /// Prints a number if the cell is open and contains a positive number, or 🟩 if the number is 0.
+    /// Prints a cell in a human-readable way.
+    ///
+    /// If no formatting option is given, the following chars are used:
+    /// - `c` for closed cells
+    /// - `m` for mine cells
+    /// - `f` for flagged cells
+    /// - ` ` (blank space) for cells with a 0
+    /// - `1` to `9` for cells with a number
+    ///
+    /// If `#` is given as formatting option, the following chars are used:
+    /// - `🟪` for closed cells
+    /// - `🟥` for mine cells
+    /// - `🟨` for flagged cells
+    /// - `🟩` for cells with a 0
+    /// - `1️⃣` to `9️⃣` for cells with a number
+    ///
+    /// Other options are ignored.
+    ///
+    /// <span style="color:red">**IMPORTANT**</span>:
+    /// Emojis used in this function are chosen because they have the same width on my machine,
+    /// making the grid aligned on columns.
+    /// I know that this may not be the same for everyone so i suggest you try and implement your own
+    /// formatting function to use the best set of characters you think is best for you.
+    /// When using monospace fonts, the non-emoji chars are perfectly aligned on columns
+    /// but of course they are not the best way to print the grid.
     // some options are: 🟩 🟨 🟦 🟫 🟧 🟪 🟥
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self.state {
-            CellState::Closed => write!(f, "🟪"),
-            CellState::Open => match self.content {
-                CellContent::Mine => write!(f, "🟥"),
-                CellContent::Number(n) => write!(f, "{}", if n != 0 { NUMBERS[n as usize] } else { NUMBERS[10] }),
-            },
-            CellState::Flagged => write!(f, "🟨"),
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        if f.alternate() {
+            match self.state {
+                CellState::Closed => write!(f, "🟪"),
+                CellState::Open => match self.content {
+                    CellContent::Mine => write!(f, "🟥"),
+                    CellContent::Number(n) => write!(f, "{}", if n > 0 { NUMBERS[n as usize] } else { NUMBERS[10] }),
+                },
+                CellState::Flagged => write!(f, "🟨"),
+            }
+        } else {
+            match self.state {
+                CellState::Closed => write!(f, "c"),
+                CellState::Open => match self.content {
+                    CellContent::Mine => write!(f, "m"),
+                    CellContent::Number(n) => if n > 0 {
+                        write!(f, "{}", n)
+                    } else {
+                        write!(f, " ")
+                    },
+                },
+                CellState::Flagged => write!(f, "f"),
+            }
         }
     }
 }
@@ -184,46 +222,32 @@ pub trait MineSweeper: Sized {
     fn width(&self) -> usize;
     /// Returns the number of mines of the board.
     fn mines(&self) -> usize;
-    /// Displays the grid in a human-readable format as a grid of emojis representing cells.
+    /// Displays the grid in a human-readable format as a grid of characters or emojis representing cells.
     ///
-    /// Can be formatted passing the `#` option:
-    /// in that case, row numbers will be shown on the left and column numbers on the top.
+    /// If `#` is given as formatting option, it will be passed to the cells to [format them as emojis](Cell::fmt).
     ///
-    /// This function relies on the implementation of [`get_cell`](MineSweeper::get_cell),
+    /// If the precision parameter `.0` is passed, row and columns numbers will be printed
+    /// on the top and left of the grid. No other number is allowed as precision at the moment.
+    /// You can combine `#.0` to print both cells and row-columns numbers as emojis.
+    ///
+    /// This default implementation relies on the implementation of [`get_cell`](MineSweeper::get_cell),
     /// [`height`](MineSweeper::height) and [`width`](MineSweeper::width).
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let print_numbers = f.alternate();
+        let (use_emojis, print_numbers) = (f.alternate(), f.precision() == Some(0));
         let max_height_digits = (self.height() - 1).to_string().len();
-        write!(
-            f,
-            "{}{}",
-            if print_numbers { get_column_numbers(self.height(), self.width()) } else { String::from("") },
-            (0..self.height())
-                .map(|i| (0..self.width())
-                    .map(|j| self
-                        .get_cell((i, j))
-                        .unwrap()
-                        .to_string()
-                    )
-                    .collect::<String>()
-                )
-                .enumerate()
-                .map(|(i, s)| format!(
-                    "{}{}",
-                    if print_numbers {
-                        format!(
-                            "{}{}",
-                            get_row_number(i, max_height_digits),
-                            ROW_NUMBER_RIGHT_SEPARATOR
-                        )
-                    } else {
-                        String::from("")
-                    },
-                    s
-                ))
-                .collect::<Vec<String>>()
-                .join("\n")
-        )
+        if print_numbers {
+            f.write_str(&get_column_numbers(self.height(), self.width(), use_emojis))?;
+        }
+        for i in 0..self.height() {
+            if print_numbers {
+                write!(f, "{}{}", &get_row_number(i, max_height_digits, use_emojis), ROW_NUMBER_RIGHT_SEPARATOR)?;
+            }
+            for j in 0..self.width() {
+                self.get_cell((i, j)).unwrap().fmt(f)?;
+            }
+            f.write_str("\n")?;
+        }
+        Ok(())
     }
 }
 
@@ -363,27 +387,27 @@ mod tests {
 🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣
 
 "#[1..].to_string();
-        assert_eq!(expected, get_column_numbers(9, 9));
+        assert_eq!(expected, get_column_numbers(9, 9, true));
 
         expected = r#"
-🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣
+   0123456789
 
 "#[1..].to_string();
-        assert_eq!(expected, get_column_numbers(10, 10));
+        assert_eq!(expected, get_column_numbers(10, 10, false));
 
         expected = r#"
 🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣1️⃣1️⃣1️⃣
 🟫🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣
 
 "#[1..].to_string();
-        assert_eq!(expected, get_column_numbers(15, 15));
+        assert_eq!(expected, get_column_numbers(15, 15, true));
 
         expected = r#"
-🟫🟫🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣2️⃣2️⃣2️⃣2️⃣2️⃣
-🟫🟫🟫🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣
+                111111111122222
+      0123456789012345678901234
 
 "#[1..].to_string();
-        assert_eq!(expected, get_column_numbers(1250, 25));
+        assert_eq!(expected, get_column_numbers(1250, 25, false));
 
         expected = r#"
 🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣1️⃣1️⃣1️⃣
@@ -391,6 +415,182 @@ mod tests {
 🟫🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣
 
 "#[1..].to_string();
-        assert_eq!(expected, get_column_numbers(11, 105));
+        assert_eq!(expected, get_column_numbers(11, 105, true));
+    }
+
+
+    #[test]
+    fn test_simple_formatter() {
+        let mut ms = MSMatrix::new(5, 5, 5).unwrap();
+        let mut expected = r#"
+ccccc
+ccccc
+ccccc
+ccccc
+ccccc
+"#[1..].to_string();
+        assert_eq!(expected, format!("{:}", ms));
+
+        ms = MSMatrix::new(5, 11, 5).unwrap();
+        expected = r#"
+ccccccccccc
+ccccccccccc
+ccccccccccc
+ccccccccccc
+ccccccccccc
+"#[1..].to_string();
+        assert_eq!(expected, format!("{:}", ms));
+
+        ms = MSMatrix::new(11, 12, 5).unwrap();
+        expected = r#"
+cccccccccccc
+cccccccccccc
+cccccccccccc
+cccccccccccc
+cccccccccccc
+cccccccccccc
+cccccccccccc
+cccccccccccc
+cccccccccccc
+cccccccccccc
+cccccccccccc
+"#[1..].to_string();
+        assert_eq!(expected, format!("{:}", ms));
+    }
+
+
+    #[test]
+    fn test_alternate_formatter() {
+        let mut ms = MSMatrix::new(5, 5, 5).unwrap();
+        let mut expected = r#"
+🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪
+"#[1..].to_string();
+        assert_eq!(expected, format!("{:#}", ms));
+
+        ms = MSMatrix::new(5, 11, 5).unwrap();
+        expected = r#"
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+"#[1..].to_string();
+        assert_eq!(expected, format!("{:#}", ms));
+
+        ms = MSMatrix::new(11, 12, 5).unwrap();
+        expected = r#"
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+"#[1..].to_string();
+        assert_eq!(expected, format!("{:#}", ms));
+    }
+
+
+    #[test]
+    fn test_precision_formatter() {
+        let mut ms = MSMatrix::new(5, 5, 5).unwrap();
+        let mut expected = r#"
+   01234
+
+0  ccccc
+1  ccccc
+2  ccccc
+3  ccccc
+4  ccccc
+"#[1..].to_string();
+        assert_eq!(expected, format!("{:.0}", ms));
+
+        ms = MSMatrix::new(5, 11, 5).unwrap();
+        expected = r#"
+             1
+   01234567890
+
+0  ccccccccccc
+1  ccccccccccc
+2  ccccccccccc
+3  ccccccccccc
+4  ccccccccccc
+"#[1..].to_string();
+        assert_eq!(expected, format!("{:.0}", ms));
+
+        ms = MSMatrix::new(11, 12, 5).unwrap();
+        expected = r#"
+              11
+    012345678901
+
+ 0  cccccccccccc
+ 1  cccccccccccc
+ 2  cccccccccccc
+ 3  cccccccccccc
+ 4  cccccccccccc
+ 5  cccccccccccc
+ 6  cccccccccccc
+ 7  cccccccccccc
+ 8  cccccccccccc
+ 9  cccccccccccc
+10  cccccccccccc
+"#[1..].to_string();
+        assert_eq!(expected, format!("{:.0}", ms));
+    }
+
+
+    #[test]
+    fn test_full_formatter() {
+        let mut ms = MSMatrix::new(5, 5, 5).unwrap();
+        let mut expected = r#"
+🟫  0️⃣1️⃣2️⃣3️⃣4️⃣
+
+0️⃣  🟪🟪🟪🟪🟪
+1️⃣  🟪🟪🟪🟪🟪
+2️⃣  🟪🟪🟪🟪🟪
+3️⃣  🟪🟪🟪🟪🟪
+4️⃣  🟪🟪🟪🟪🟪
+"#[1..].to_string();
+        assert_eq!(expected, format!("{:#.0}", ms));
+
+        ms = MSMatrix::new(5, 11, 5).unwrap();
+        expected = r#"
+🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣
+🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣
+
+0️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+1️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+2️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+3️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+4️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+"#[1..].to_string();
+        assert_eq!(expected, format!("{:#.0}", ms));
+
+        ms = MSMatrix::new(11, 12, 5).unwrap();
+        expected = r#"
+🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣
+🟫🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣
+
+🟫0️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟫1️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟫2️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟫3️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟫4️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟫5️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟫6️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟫7️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟫8️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+🟫9️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+1️⃣0️⃣  🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
+"#[1..].to_string();
+        assert_eq!(expected, format!("{:#.0}", ms));
     }
 }
