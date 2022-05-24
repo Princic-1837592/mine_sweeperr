@@ -3,8 +3,9 @@ name = "mine_sweeperr"
 version = "0.3.0"
 license = "Apache-2.0"
 authors = ["Princic-1837592 <andreapri.99@gmail.com>"]
-description = "Minimalist interface to manage the backed of a Minesweeper game"
+description = "Minimalist interface to manage the backed of a mine sweeper game"
 repository = "https://github.com/Princic-1837592/mine_sweeperr"
+homepage = "https://princic-1837592.github.io/"
 keywords = ["mine", "sweeper", "minesweeper"]
 edition = "2021"
 

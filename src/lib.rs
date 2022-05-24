@@ -1,10 +1,16 @@
 //! # Mine sweeper
 //!
-//! A minimalist interface to manage the backend of a Minesweeper game.
+//! A minimalist interface to manage the backend of a mine sweeper game.
 //!
+//! Import [`MineSweeper`](MineSweeper) and one of its implementations ([`MSMatrix`](MSMatrix) or [`MSHash`](MSHash)) to use it.
+//! You can also create your own implementation, if you prefer:
+//! this crate already defines the needed functions and types to create and manage a mine sweeper game.
+//!
+//! <span style="color:red">**IMPORTANT**</span>:
 //! This crate supports [wasm](https://crates.io/crates/wasm-bindgen) but, in that case,
-//! seeded random generators are not allowed due to incompatibility.
+//! seeded random generators are not allowed due to incompatibility with wasm itself.
 //! Maybe in future versions some kind of trick will be implemented to make it work.
+//! A working implementation of this library with wasm frontend is available on [my GitHub page](https://Princic-1837592.github.io)
 
 
 mod ms_hash;
@@ -19,13 +25,13 @@ pub use ms_matrix::*;
 pub use utils::*;
 
 
-/// A pair of coordinates. The first coordinate is the row, the second is the column.
+/// A pair of zero-based coordinates. The first coordinate is the row, the second is the column.
 pub type Coordinate = (usize, usize);
 /// The result of some potentially dangerous action.
 pub type Result<T> = std::result::Result<T, Error>;
 
 
-/// Error type for the [`minesweeper`](MineSweeper) game.
+/// Error type for the [`MineSweeper`](MineSweeper) game.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Error {
     OutOfBounds,
@@ -162,7 +168,7 @@ pub trait MineSweeper: Sized {
     /// - the opening procedure should not stop at the first mine found,
     /// but should keep opening until all safe neighboring cells are opened
     fn open(&mut self, coord: Coordinate) -> Result<OpenResult>;
-    /// Tries to flag a cell.
+    /// Tries to toggle the flag on a cell.
     ///
     /// Returns [`OutOfBounds`](Error::OutOfBounds) if the given coordinate is out of bounds
     /// and [`AlreadyOpen`](Error::AlreadyOpen) if the cell is already open.
@@ -170,6 +176,12 @@ pub trait MineSweeper: Sized {
     fn toggle_flag(&mut self, coord: Coordinate) -> Result<CellState>;
     /// Returns the state of the given cell.
     fn get_cell(&self, coord: Coordinate) -> Result<Cell>;
+    /// Returns the height of the board.
+    fn height(&self) -> usize;
+    /// Returns the width of the board.
+    fn width(&self) -> usize;
+    /// Returns the number of mines of the board.
+    fn mines(&self) -> usize;
 }
 
 
@@ -177,14 +189,14 @@ pub trait MineSweeper: Sized {
 mod tests {
     use std::collections::HashSet;
     use rand::{Rng, SeedableRng, rngs::StdRng};
-    use crate::{CellContent, MineSweeper, MSHash, OpenResult, MSMatrix,
+    use crate::{CellContent, MineSweeper, MSHash, MSMatrix,
                 iter_neighbors, get_column_numbers};
 
 
     #[test]
     fn compare_hash_matrix() {
         let mut rng = StdRng::seed_from_u64(6);
-        let (h, w, m) = (10, 10, 25);
+        let (h, w, m) = (10, 15, 25);
         let mut msm = MSMatrix::from_rng(h, w, m, &mut rng.clone()).unwrap();
         let mut msh = MSHash::from_rng(h, w, m, &mut rng.clone()).unwrap();
         assert_eq!(msm.to_string(), msh.to_string());
@@ -215,8 +227,11 @@ mod tests {
     #[allow(unused_assignments)]
     fn play_matrix() {
         let mut rng = rand::thread_rng();
-        let (h, w, m) = (10, 10, 25);
+        let (h, w, m) = (10, 15, 25);
         let mut ms: MSMatrix = MSMatrix::new(h, w, m).unwrap();
+        assert_eq!(ms.height(), h);
+        assert_eq!(ms.width(), w);
+        assert_eq!(ms.mines(), m);
         for i in 0..h {
             for j in 0..w {
                 if let CellContent::Mine = ms.get_cell((i, j)).unwrap().content {
@@ -227,7 +242,7 @@ mod tests {
             }
         }
         println!("{:#}\n", ms);
-        let mut open_result: OpenResult;
+        let mut open_result;
         for i in 0..h {
             for j in 0..w {
                 open_result = ms.open((i, j)).unwrap();
@@ -244,8 +259,11 @@ mod tests {
     #[allow(unused_assignments)]
     fn play_hash() {
         let mut rng = rand::thread_rng();
-        let (h, w, m) = (10, 10, 25);
+        let (h, w, m) = (10, 15, 25);
         let mut ms: MSHash = MSHash::new(h, w, m).unwrap();
+        assert_eq!(ms.height(), h);
+        assert_eq!(ms.width(), w);
+        assert_eq!(ms.mines(), m);
         for i in 0..h {
             for j in 0..w {
                 if let CellContent::Mine = ms.get_cell((i, j)).unwrap().content {
@@ -256,7 +274,7 @@ mod tests {
             }
         }
         println!("{:#}\n", ms);
-        let mut open_result: OpenResult;
+        let mut open_result;
         for i in 0..h {
             for j in 0..w {
                 open_result = ms.open((i, j)).unwrap();
@@ -270,7 +288,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn it_panics() {
-        let (h, w) = (10, 10);
+        let (h, w) = (10, 15);
         let m = w * h;
         MSMatrix::new(h, w, m).unwrap();
     }

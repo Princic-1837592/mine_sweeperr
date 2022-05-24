@@ -28,13 +28,8 @@ pub fn iter_neighbors(coord @ (x, y): Coordinate, height: usize, width: usize) -
 
 
 /// Returns a string representing the superior numbers indicating columns, to be read in vertical.
-/// Example: if `width = 15`, returns
-/// ```
-///           11111
-/// 012345678901234
-/// ```
 pub(crate) fn get_column_numbers(height: usize, width: usize) -> String {
-    let (max_width_digits, max_height_digits) = ((width - 1).to_string().len(), (height - 1).to_string().len());
+    let (max_height_digits, max_width_digits) = ((height - 1).to_string().len(), (width - 1).to_string().len());
     // The space to leave on the left considering that will be occupied by row numbers below.
     let left_space = max_height_digits + ROW_NUMBER_RIGHT_SEPARATOR.len();
     // Each line is large: the space taken by row numbers + width + new line.

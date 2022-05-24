@@ -13,6 +13,8 @@ use wasm_bindgen::prelude::*;
 
 
 #[cfg(target_family = "wasm")]
+/// Fake trait to replace the unsupported rand crate when compiling with wasm.
+/// in that case, just use [`new`](crate::MineSweeper::new) instead of [`from_rng`](crate::MineSweeper::from_rng).
 pub trait Rng {}
 
 

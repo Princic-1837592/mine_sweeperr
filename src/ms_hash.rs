@@ -9,8 +9,8 @@ use crate::{Cell, CellContent, CellState, Error, iter_neighbors, MineSweeper, Op
 /// Use this when you don't want to load the whole grid in memory at the beginning.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MSHash {
-    width: usize,
     height: usize,
+    width: usize,
     open: HashSet<Coordinate>,
     flagged: HashSet<Coordinate>,
     mines: HashSet<Coordinate>,
@@ -19,10 +19,10 @@ pub struct MSHash {
 
 impl MSHash {
     /// Creates a new instance.
-    fn new_unchecked(width: usize, height: usize, mines: usize) -> Self {
+    fn new_unchecked(height: usize, width: usize, mines: usize) -> Self {
         Self {
-            width,
             height,
+            width,
             open: Default::default(),
             flagged: Default::default(),
             mines: HashSet::with_capacity(mines),
@@ -71,7 +71,7 @@ impl MineSweeper for MSHash {
         if mines >= height * width {
             return Err(Error::TooManyMines);
         }
-        if width == 0 || height == 0 {
+        if height == 0 || width == 0 {
             return Err(Error::InvalidParameters);
         }
         let mut result = Self::new_unchecked(height, width, mines);
@@ -139,6 +139,18 @@ impl MineSweeper for MSHash {
             state = CellState::Flagged;
         }
         Ok(Cell { state, content })
+    }
+
+    fn height(&self) -> usize {
+        self.height
+    }
+
+    fn width(&self) -> usize {
+        self.width
+    }
+
+    fn mines(&self) -> usize {
+        self.mines.len()
     }
 }
 

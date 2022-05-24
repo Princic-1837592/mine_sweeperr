@@ -9,18 +9,20 @@ use std::collections::VecDeque;
 /// Use this when you want to load the whole grid in memory at the beginning.
 #[derive(Debug, Clone)]
 pub struct MSMatrix {
-    width: usize,
     height: usize,
+    width: usize,
+    mines: usize,
     cells: Vec<Vec<Cell>>,
 }
 
 
 impl MSMatrix {
     /// Creates a new instance.
-    fn new_unchecked(width: usize, height: usize) -> Self {
+    fn new_unchecked(height: usize, width: usize, mines: usize) -> Self {
         Self {
-            width,
             height,
+            width,
+            mines,
             cells: vec![vec![Cell::default(); width]; height],
         }
     }
@@ -73,10 +75,10 @@ impl MineSweeper for MSMatrix {
         if mines >= height * width {
             return Err(Error::TooManyMines);
         }
-        if width == 0 || height == 0 {
+        if height == 0 || width == 0 {
             return Err(Error::InvalidParameters);
         }
-        let mut result = Self::new_unchecked(width, height);
+        let mut result = Self::new_unchecked(height, width, mines);
         result.randomize_mines(mines, rng);
         Ok(result)
     }
@@ -131,6 +133,18 @@ impl MineSweeper for MSMatrix {
     fn get_cell(&self, coord @ (x, y): Coordinate) -> Result<Cell> {
         self.check_coordinate(coord)?;
         Ok(self.cells[x][y])
+    }
+
+    fn height(&self) -> usize {
+        self.height
+    }
+
+    fn width(&self) -> usize {
+        self.width
+    }
+
+    fn mines(&self) -> usize {
+        self.mines
     }
 }
 
