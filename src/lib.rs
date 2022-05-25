@@ -145,8 +145,8 @@ impl Display for Cell {
     /// <span style="color:red">**IMPORTANT**</span>:
     /// Emojis used in this function are chosen because they have the same width on my machine,
     /// making the grid aligned on columns.
-    /// I know that this may not be the same for everyone so i suggest you try and implement your own
-    /// formatting function to use the best set of characters you think is best for you.
+    /// I know that this may not be the same for everyone so i suggest you try and implement
+    /// your own formatting function to use the set of characters you think is best for you.
     /// When using monospace fonts, the non-emoji chars are perfectly aligned on columns
     /// but of course they are not the best way to print the grid.
     // some options are: 🟩 🟨 🟦 🟫 🟧 🟪 🟥
@@ -178,22 +178,27 @@ impl Display for Cell {
 }
 
 
-/// A board with its cells.
+/// Represents a board with its cells.
 ///
-/// Provides methods to create a new instance, to open and flag cells
+/// Declares methods to create a new instance, to open and flag cells
 /// and to access the content and the state of a cell.
+///
+/// <span style="color:red">**IMPORTANT**</span>:
+/// This trait and the included implementations are only the `BACKEND` of the game.
+/// No user interaction nor frontend are implemented here, only the functions that you can call
+/// from the frontend to interact with the game.
 pub trait MineSweeper: Sized {
     /// Creates a new instance of the game.
     ///
     /// Returns [`TooManyMines`](Error::TooManyMines) if the number of mines is greater than the number of cells.
-    /// Returns [`InvalidParameters`](Error::InvalidParameters) if the number of rows or columns is 0.
+    /// Returns [`InvalidParameters`](Error::InvalidParameters) if the number of rows or columns is `0`.
     /// If not overridden, the default rng used is [`rand::thread_rng()`](rand::thread_rng()).
     fn new(height: usize, width: usize, mines: usize) -> Result<Self> {
         Self::from_rng(height, width, mines, &mut random::thread_rng())
     }
     /// Creates a new instance of the game using the given random generator.
     /// Can be used to test the game or to reproduce a specific game by passing a seeded rng.
-    /// When using [wasm](https://crates.io/crates/wasm-bindgen) this function can't be used.
+    /// When compiling with [wasm](https://crates.io/crates/wasm-bindgen) this function can't be used.
     fn from_rng(height: usize, width: usize, mines: usize, rng: &mut impl random::Rng) -> Result<Self>;
     /// Tries to open a cell.
     ///
@@ -228,7 +233,7 @@ pub trait MineSweeper: Sized {
     ///
     /// If the precision parameter `.0` is passed, row and columns numbers will be printed
     /// on the top and left of the grid. No other number is allowed as precision at the moment.
-    /// You can combine `#.0` to print both cells and row-columns numbers as emojis.
+    /// You can combine `#.0` to print both cells and row-column numbers as emojis.
     ///
     /// This default implementation relies on the implementation of [`get_cell`](MineSweeper::get_cell),
     /// [`height`](MineSweeper::height) and [`width`](MineSweeper::width).
