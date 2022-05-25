@@ -7,7 +7,7 @@
 </p>
 </div>
 
-A minimalist interface to manage the backend of a Minesweeper game.
+A minimalist interface to manage the backend of a mine sweeper game.
 Read the [docs](https://docs.rs/mine_sweeperr) for more information.
 
-[LIVE PROJECT](https://princic-1837592.github.io/)
+[LIVE PROJECT](https://Princic-1837592.github.io/)
