@@ -13,8 +13,9 @@ edition = "2021"
 [lib]
 doctest = false
 
-[target.'cfg(not(target_family = "wasm"))'.dependencies]
+[dependencies]
 rand = "0.8.5"
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 wasm-bindgen = "0.2.80"
+getrandom = { version = "0.2.7", features = ["js"] }

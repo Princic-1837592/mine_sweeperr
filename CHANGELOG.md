@@ -11,7 +11,7 @@ Many major changes:
 cells that are already open but surrounded by enough flags will open their closed neighbors.
 
 ## 0.2.0
-Added hash implementation of the game. Added support for custom random generator.
+Added hash implementation of the game. Added support for seeded random generator.
 
 ## 0.1.0
 Initial release. The matrix implementation is ready to use.
