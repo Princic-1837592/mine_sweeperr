@@ -300,87 +300,151 @@ pub trait MineSweeper: Sized {
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::{get_column_numbers, CellContent, MSHash, MSMatrix, MineSweeper, OpenResult};
+mod implementations_tests {
+    use crate::{iter_neighbors, CellContent, Error, MSHash, MSMatrix, MineSweeper, OpenResult};
     use rand::{rngs::StdRng, Rng, SeedableRng};
+    use std::fmt::Display;
 
     #[test]
     #[allow(unused_variables)]
     #[allow(unused_assignments)]
-    fn compare_hash_matrix() {
-        let mut rng = StdRng::seed_from_u64(6);
-        let (h, w, m) = (10, 15, 25);
-        let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-        let mut msm = MSMatrix::from_rng(h, w, m, start_from, &mut rng.clone()).unwrap();
-        let mut msh = MSHash::from_rng(h, w, m, start_from, &mut rng.clone()).unwrap();
-        assert_eq!(msm.to_string(), msh.to_string());
-        for i in 0..h {
-            for j in 0..w {
-                assert_eq!(msm.get_cell((i, j)), msh.get_cell((i, j)));
-                if let CellContent::Mine = msm.get_cell((i, j)).unwrap().content {
-                    if rng.gen_range(0..100) <= 5 {
-                        assert_eq!(msm.toggle_flag((i, j)), msh.toggle_flag((i, j)));
+    fn play() {
+        fn test<T: MineSweeper>() {
+            let mut rng = rand::thread_rng();
+            let (h, w, m) = (10, 15, 25);
+            let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
+            let mut ms = T::from_rng(h, w, m, start_from, &mut rng).unwrap();
+            assert_eq!(ms.height(), h);
+            assert_eq!(ms.width(), w);
+            assert_eq!(ms.mines(), m);
+            for i in 0..h {
+                for j in 0..w {
+                    if let CellContent::Mine = ms.get_cell((i, j)).unwrap().content {
+                        if rng.gen_range(0..100) <= 60 {
+                            ms.toggle_flag((i, j)).ok();
+                        }
                     }
                 }
             }
+            // println!("{:#}\n", ms);
+            let mut open_result;
+            for i in 0..h {
+                for j in 0..w {
+                    open_result = ms.open((i, j)).unwrap();
+                    // println!("{:?}", open_result);
+                    // println!("{}\n\n", ms);
+                }
+            }
+            // println!("{:#}\n", ms);
         }
-        assert_eq!(format!("{:#}", msm), format!("{:#}", msh));
-        let (mut msm_open, mut msh_open): (OpenResult, OpenResult);
-        // opening the whole grid and comparing strings could take a lot of time for big grids
-        // or when the grid has a lot of flags
-        for i in 0..h {
-            for j in 0..w {
-                msm_open = msm.open((i, j)).unwrap();
-                msh_open = msh.open((i, j)).unwrap();
-                assert_eq!(msm_open, msh_open);
-                assert_eq!(format!("{:#}", msm), format!("{:#}", msh));
+        test::<MSMatrix>();
+        test::<MSHash>();
+    }
+
+    #[test]
+    fn invalid_number_of_mines() {
+        fn test<T: MineSweeper>() {
+            let (h, w) = (10, 15);
+            let m = w * h;
+            match T::new(h, w, m, (0, 0)) {
+                Err(Error::TooManyMines) => (),
+                Err(_) => panic!("Wrong error: MSHash::new should panic as Error::TooManyMines!"),
+                Ok(_) => panic!("MSHash::new should panic!"),
+            }
+            let m = w * h - 10;
+            assert!(T::new(h, w, m, (0, 0)).is_ok());
+        }
+        test::<MSMatrix>();
+        test::<MSHash>();
+    }
+
+    #[test]
+    fn start_from() {
+        fn test<T: MineSweeper>() {
+            for _ in 0..1000 {
+                let mut rng = rand::thread_rng();
+                let (h, w, m) = (100, 150, 250);
+                let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
+                let ms: T = T::new(h, w, m, start_from).unwrap();
+                let mut should_be_safe = iter_neighbors(start_from, h, w)
+                    .unwrap()
+                    .map(|(r, c)| ms.get_cell((r, c)).unwrap().content);
+                assert_eq!(
+                    ms.get_cell(start_from).unwrap().content,
+                    CellContent::Number(0)
+                );
+                assert!(!should_be_safe.any(|cell_content| cell_content == CellContent::Mine));
             }
         }
+        test::<MSMatrix>();
+        test::<MSHash>();
     }
 
     #[test]
-    fn test_column_numbers() {
-        let mut expected = r#"
-🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣
-
-"#[1..]
-            .to_string();
-        assert_eq!(expected, get_column_numbers(9, 9, true));
-
-        expected = r#"
-   0123456789
-
-"#[1..]
-            .to_string();
-        assert_eq!(expected, get_column_numbers(10, 10, false));
-
-        expected = r#"
-🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣1️⃣1️⃣1️⃣
-🟫🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣
-
-"#[1..]
-            .to_string();
-        assert_eq!(expected, get_column_numbers(15, 15, true));
-
-        expected = r#"
-                111111111122222
-      0123456789012345678901234
-
-"#[1..]
-            .to_string();
-        assert_eq!(expected, get_column_numbers(1250, 25, false));
-
-        expected = r#"
-🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣1️⃣1️⃣1️⃣
-🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣0️⃣0️⃣0️⃣0️⃣0️⃣
-🟫🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣
-
-"#[1..].to_string();
-        assert_eq!(expected, get_column_numbers(11, 105, true));
+    fn invalid_start_from() {
+        fn test<T: MineSweeper>() {
+            let (h, w, m) = (10, 15, 25);
+            let start_from = (h, w);
+            match T::new(h, w, m, start_from) {
+                Err(Error::OutOfBounds) => (),
+                Err(_) => panic!("Wrong error: MSMatrix::new should panic as Error::OutOfBounds!"),
+                Ok(_) => panic!("MSMatrix::new should panic!"),
+            }
+            let start_from = (h - 1, w - 1);
+            assert!(T::new(h, w, m, start_from).is_ok());
+        }
+        test::<MSMatrix>();
+        test::<MSHash>();
     }
 
     #[test]
-    fn test_simple_formatter() {
+    #[allow(unused_variables)]
+    #[allow(unused_assignments)]
+    fn compare_implementations() {
+        fn test<T, E>()
+        where
+            T: MineSweeper + Display,
+            E: MineSweeper + Display,
+        {
+            let mut rng = StdRng::seed_from_u64(6);
+            let (h, w, m) = (10, 15, 25);
+            let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
+            let mut ms_1 = T::from_rng(h, w, m, start_from, &mut rng.clone()).unwrap();
+            let mut ms_2 = E::from_rng(h, w, m, start_from, &mut rng.clone()).unwrap();
+            assert_eq!(ms_1.to_string(), ms_2.to_string());
+            for i in 0..h {
+                for j in 0..w {
+                    assert_eq!(ms_1.get_cell((i, j)), ms_2.get_cell((i, j)));
+                    if let CellContent::Mine = ms_1.get_cell((i, j)).unwrap().content {
+                        if rng.gen_range(0..100) <= 5 {
+                            assert_eq!(ms_1.toggle_flag((i, j)), ms_2.toggle_flag((i, j)));
+                        }
+                    }
+                }
+            }
+            assert_eq!(format!("{:#}", ms_1), format!("{:#}", ms_2));
+            let (mut msm_open, mut msh_open): (OpenResult, OpenResult);
+            // opening the whole grid and comparing strings could take a lot of time for big grids
+            // or when the grid has a lot of flags
+            for i in 0..h {
+                for j in 0..w {
+                    msm_open = ms_1.open((i, j)).unwrap();
+                    msh_open = ms_2.open((i, j)).unwrap();
+                    assert_eq!(msm_open, msh_open);
+                    assert_eq!(format!("{:#}", ms_1), format!("{:#}", ms_2));
+                }
+            }
+        }
+        test::<MSMatrix, MSHash>();
+    }
+}
+
+#[cfg(test)]
+mod formatter_tests {
+    use crate::{MSMatrix, MineSweeper};
+
+    #[test]
+    fn simple_formatter() {
         let start_from = (0, 0);
         let mut ms = MSMatrix::new(5, 5, 5, start_from).unwrap();
         let mut expected = r#"
@@ -423,7 +487,7 @@ CCCCCCCCCCCC
     }
 
     #[test]
-    fn test_alternate_formatter() {
+    fn alternate_formatter() {
         let start_from = (0, 0);
         let mut ms = MSMatrix::new(5, 5, 5, start_from).unwrap();
         let mut expected = r#"
@@ -466,7 +530,7 @@ CCCCCCCCCCCC
     }
 
     #[test]
-    fn test_precision_formatter() {
+    fn precision_formatter() {
         let start_from = (0, 0);
         let mut ms = MSMatrix::new(5, 5, 5, start_from).unwrap();
         let mut expected = r#"
@@ -517,7 +581,7 @@ CCCCCCCCCCCC
     }
 
     #[test]
-    fn test_full_formatter() {
+    fn full_formatter() {
         let start_from = (0, 0);
         let mut ms = MSMatrix::new(5, 5, 5, start_from).unwrap();
         let mut expected = r#"
