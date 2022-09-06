@@ -1,7 +1,4 @@
-use crate::{
-    check, iter_neighbors, Cell, CellContent, CellState, Coordinate, Error, GameState, MineSweeper,
-    OpenResult, Result,
-};
+use crate::{check, iter_neighbors, Cell, CellContent, CellState, Coordinate, Error, GameState, MineSweeper, OpenResult, Result, Difficulty};
 use rand::Rng;
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
@@ -78,22 +75,12 @@ impl MSMatrix {
 
 impl MineSweeper for MSMatrix {
     fn from_rng(
-        height: usize,
-        width: usize,
-        mines: usize,
+        difficulty: Difficulty,
         start_from: Coordinate,
         rng: &mut impl Rng,
     ) -> Result<Self> {
-        check!(mines height width start_from);
-        // if mines >= height * width {
-        //     return Err(Error::TooManyMines);
-        // }
-        // if height == 0 || width == 0 {
-        //     return Err(Error::InvalidParameters);
-        // }
-        // if start_from.0 >= height || start_from.1 >= width {
-        //     return Err(Error::OutOfBounds);
-        // }
+        let difficulty @ (height, width, mines) = difficulty.into();
+        check!(difficulty, start_from);
         let mut result = Self::new_unchecked(height, width, mines);
         result.randomize_mines(mines, start_from, rng);
         Ok(result)
@@ -119,11 +106,14 @@ impl MineSweeper for MSMatrix {
                     }
                 }
                 if let CellContent::Number(neighboring_mines) = self.cells[r][c].content {
-                    if self.count_neighboring_flags(coord) >= neighboring_mines {
-                        iter_neighbors((r, c), self.height, self.width)
-                            .unwrap()
-                            .filter(|&(r, c)| self.cells[r][c].state != CellState::Open)
-                            .for_each(|coord| queue.push_back(coord));
+                    if neighboring_mines > 0
+                        && self.count_neighboring_flags(coord) >= neighboring_mines
+                    {
+                        queue.extend(
+                            iter_neighbors((r, c), self.height, self.width)
+                                .unwrap()
+                                .filter(|&(r, c)| self.cells[r][c].state != CellState::Open),
+                        );
                     }
                 }
             }

@@ -3,7 +3,7 @@ name = "mine_sweeperr"
 version = "0.3.0"
 license = "MIT OR Apache-2.0"
 authors = ["Princic-1837592 <andreapri.99@gmail.com>"]
-description = "Minimalist interface to manage the backed of a mine sweeper game"
+description = "Interface to manage the backed of a mine sweeper game"
 repository = "https://github.com/Princic-1837592/mine_sweeperr"
 homepage = "https://Princic-1837592.github.io/"
 keywords = ["mine", "sweeper", "minesweeper"]
@@ -11,7 +11,7 @@ categories = ["data-structures", "games", "game-development", "wasm"]
 edition = "2021"
 
 [lib]
-doctest = false
+#doctest = false
 
 [dependencies]
 rand = "0.8.5"

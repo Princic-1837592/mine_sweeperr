@@ -1,6 +1,6 @@
 use crate::{
-    check, iter_neighbors, Cell, CellContent, CellState, Coordinate, Error, GameState, MineSweeper,
-    OpenResult, Result,
+    check, iter_neighbors, Cell, CellContent, CellState, Coordinate, Difficulty, Error, GameState,
+    MineSweeper, OpenResult, Result,
 };
 use rand::Rng;
 use std::collections::{HashSet, VecDeque};
@@ -72,13 +72,12 @@ impl MSHash {
 
 impl MineSweeper for MSHash {
     fn from_rng(
-        height: usize,
-        width: usize,
-        mines: usize,
+        difficulty: Difficulty,
         start_from: Coordinate,
         rng: &mut impl Rng,
     ) -> Result<Self> {
-        check!(mines height width start_from);
+        let difficulty @ (height, width, mines, _deterministic) = difficulty.into();
+        check!(difficulty, start_from);
         let mut result = Self::new_unchecked(height, width, mines);
         result.randomize_mines(mines, start_from, rng);
         Ok(result)
@@ -106,7 +105,9 @@ impl MineSweeper for MSHash {
                     }
                 }
                 if let CellContent::Number(neighboring_mines) = cell.content {
-                    if self.count_neighboring_flags(coord) >= neighboring_mines {
+                    if neighboring_mines > 0
+                        && self.count_neighboring_flags(coord) >= neighboring_mines
+                    {
                         iter_neighbors(coord, self.height, self.width)
                             .unwrap()
                             .filter(|&coord| self.get_cell(coord).unwrap().state != CellState::Open)

@@ -1,9 +1,22 @@
 //! # Mine sweeper
 //!
-//! A minimalist interface to manage the backend of a mine sweeper game.
+//! An easy-to-use interface to manage the backend of a mine sweeper game.
 //!
 //! Import [`MineSweeper`](MineSweeper) and one of its implementations
-//! ([`MSMatrix`](MSMatrix) or [`MSHash`](MSHash)) to use it.
+//! - [`MSMatrix`](MSMatrix) (recommended)
+//! - [`MSHash`](MSHash)
+//!
+//! to use it.
+//! ```
+//! use mine_sweeperr::{MSMatrix, MineSweeper, Difficulty};
+//!
+//! // Create a new game with a 16x16 board and 40 mines
+//! // setting the starting point at (0, 0)
+//! let mut ms: MSMatrix = MSMatrix::new(Difficulty::medium(), (0, 0)).unwrap();
+//!
+//! // Reveal the cell at (0, 0)
+//! ms.open((0, 0)).unwrap();
+//! ```
 //! You can also create your own implementation, if you prefer:
 //! this crate already declares the needed functions and types to create and manage a mine sweeper game.
 //!
@@ -14,15 +27,14 @@
 //! seeded random generators (or in general the rand crate) are not allowed
 //! due to incompatibility with wasm itself.
 //! Maybe in future versions some kind of trick will be implemented to make it work.
-//! A working implementation of this library with wasm frontend
+//! A [working implementation](https://princic-1837592.github.io/mine_sweeper/index.html) of this library with wasm frontend
 //! is available on [my GitHub page](https://Princic-1837592.github.io)
 
-mod ms_hash;
-mod ms_matrix;
+mod implementations;
+mod macros;
 mod utils;
 
-pub use ms_hash::*;
-pub use ms_matrix::*;
+pub use implementations::*;
 use std::fmt::{Display, Formatter};
 pub use utils::*;
 
@@ -190,19 +202,110 @@ impl Display for Cell {
     }
 }
 
-#[macro_export]
-macro_rules! check {
-    ($mines:ident $height:ident $width:ident $start_from:ident) => {
-        if $mines >= $height * $width - 9 {
-            return Err(Error::TooManyMines);
+/// TODO Represents the difficulty of a game in terms of height, width and number of mines.
+///
+/// When calling [`MineSweeper::new`](MineSweeper::new) or [`MineSweeper::from_rng`](MineSweeper::from_rng)
+/// you can either pass a default difficulty or a custom one.
+///
+/// The default difficulties are:
+/// - `Easy`: `9x9` grid with `10` mines
+/// - `Medium`: `16x16` grid with `40` mines
+/// - `Hard`: `16x30` grid with `99` mines
+///
+/// Difficulty can be derived from a tuple representing `(height, width, mines)`
+/// or from a tuple representing `(height, width, density)`.
+/// For example:
+/// ```
+/// # use mine_sweeperr::Difficulty;
+/// let difficulty: Difficulty = (10, 10, 0.1).into();
+/// ```
+/// will produce a difficulty with `10x10` grid and `10` mines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Difficulty {
+    height: usize,
+    width: usize,
+    mines: usize,
+    deterministic: bool,
+}
+
+impl Difficulty {
+    const fn new(height: usize, width: usize, mines: usize) -> Self {
+        Difficulty {
+            height,
+            width,
+            mines,
+            deterministic: true,
         }
-        if $height == 0 || $width == 0 {
-            return Err(Error::InvalidParameters);
+    }
+
+    pub const fn easy() -> Self {
+        Self::new(9, 9, 10)
+    }
+
+    pub const fn medium() -> Self {
+        Self::new(16, 16, 40)
+    }
+
+    pub const fn hard() -> Self {
+        Self::new(16, 30, 99)
+    }
+
+    pub const fn custom(height: usize, width: usize, mines: usize) -> Self {
+        Self::new(height, width, mines)
+    }
+
+    pub fn from_density(height: usize, width: usize, density: f32) -> Self {
+        Self::new(height, width, ((height * width) as f32 * density) as usize)
+    }
+
+    pub const fn deterministic(self) -> Self {
+        Self {
+            deterministic: true,
+            ..self
         }
-        if $start_from.0 >= $height || $start_from.1 >= $width {
-            return Err(Error::OutOfBounds);
+    }
+
+    pub const fn non_deterministic(self) -> Self {
+        Self {
+            deterministic: false,
+            ..self
         }
-    };
+    }
+}
+// #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// pub enum Difficulty {
+//     Easy,
+//     Medium,
+//     Hard,
+//     Custom(usize, usize, usize),
+// }
+
+impl From<Difficulty> for (usize, usize, usize) {
+    fn from(difficulty: Difficulty) -> (usize, usize, usize) {
+        (difficulty.height, difficulty.width, difficulty.mines)
+    }
+}
+impl From<Difficulty> for (usize, usize, usize, bool) {
+    fn from(difficulty: Difficulty) -> (usize, usize, usize, bool) {
+        (
+            difficulty.height,
+            difficulty.width,
+            difficulty.mines,
+            difficulty.deterministic,
+        )
+    }
+}
+
+impl From<(usize, usize, usize)> for Difficulty {
+    fn from((height, width, mines): (usize, usize, usize)) -> Difficulty {
+        Difficulty::custom(height, width, mines)
+    }
+}
+
+impl From<(usize, usize, f32)> for Difficulty {
+    fn from((height, width, density): (usize, usize, f32)) -> Difficulty {
+        Difficulty::from_density(height, width, density)
+    }
 }
 
 /// Represents a board with its cells.
@@ -224,16 +327,14 @@ pub trait MineSweeper: Sized {
     /// - Returns [`OutOfBounds`](Error::OutOfBounds) if the starting point is out of bounds.
     ///
     /// If not overridden, the default rng used is [`rand::thread_rng()`](rand::thread_rng()).
-    fn new(height: usize, width: usize, mines: usize, start_from: Coordinate) -> Result<Self> {
-        Self::from_rng(height, width, mines, start_from, &mut rand::thread_rng())
+    fn new(difficulty: Difficulty, start_from: Coordinate) -> Result<Self> {
+        Self::from_rng(difficulty, start_from, &mut rand::thread_rng())
     }
     /// Creates a new instance of the game using the given random generator.
     /// Can be used to test the game or to reproduce a specific game by passing a seeded rng.
     /// Read more about constraints in a newly created game [here](MineSweeper::new).
     fn from_rng(
-        height: usize,
-        width: usize,
-        mines: usize,
+        difficulty: Difficulty,
         start_from: Coordinate,
         rng: &mut impl rand::Rng,
     ) -> Result<Self>;
@@ -300,8 +401,8 @@ pub trait MineSweeper: Sized {
 }
 
 #[cfg(test)]
-mod implementations_tests {
-    use crate::{iter_neighbors, CellContent, Error, MSHash, MSMatrix, MineSweeper, OpenResult};
+mod test_implementations {
+    use crate::{iter_neighbors, CellContent, Difficulty, Error, MSHash, MSMatrix, MineSweeper};
     use rand::{rngs::StdRng, Rng, SeedableRng};
     use std::fmt::Display;
 
@@ -309,14 +410,18 @@ mod implementations_tests {
     #[allow(unused_variables)]
     #[allow(unused_assignments)]
     fn play() {
-        fn test<T: MineSweeper>() {
+        fn test<T: MineSweeper + Display>() {
             let mut rng = rand::thread_rng();
-            let (h, w, m) = (10, 15, 25);
+            let difficulty = Difficulty::hard();
+            let (h, w, m) = difficulty.into();
             let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-            let mut ms = T::from_rng(h, w, m, start_from, &mut rng).unwrap();
+            let mut ms = T::from_rng(difficulty, start_from, &mut rng).unwrap();
+
             assert_eq!(ms.height(), h);
             assert_eq!(ms.width(), w);
             assert_eq!(ms.mines(), m);
+
+            // flags 60% of the mines
             for i in 0..h {
                 for j in 0..w {
                     if let CellContent::Mine = ms.get_cell((i, j)).unwrap().content {
@@ -326,7 +431,9 @@ mod implementations_tests {
                     }
                 }
             }
-            // println!("{:#}\n", ms);
+            // println!("{:}\n", ms);
+
+            // opens all cells
             let mut open_result;
             for i in 0..h {
                 for j in 0..w {
@@ -335,8 +442,9 @@ mod implementations_tests {
                     // println!("{}\n\n", ms);
                 }
             }
-            // println!("{:#}\n", ms);
+            // println!("{:}\n", ms);
         }
+
         test::<MSMatrix>();
         test::<MSHash>();
     }
@@ -345,15 +453,33 @@ mod implementations_tests {
     fn invalid_number_of_mines() {
         fn test<T: MineSweeper>() {
             let (h, w) = (10, 15);
-            let m = w * h;
-            match T::new(h, w, m, (0, 0)) {
+            let mut m = w * h;
+            let mut difficulty = Difficulty::custom(h, w, m);
+            let start_from = (0, 0);
+
+            match T::new(difficulty, start_from) {
                 Err(Error::TooManyMines) => (),
-                Err(_) => panic!("Wrong error: MSHash::new should panic as Error::TooManyMines!"),
-                Ok(_) => panic!("MSHash::new should panic!"),
+                Err(_) => {
+                    panic!("Wrong error: MineSweeper::new should panic with Error::TooManyMines!")
+                }
+                Ok(_) => panic!("MineSweeper::new should panic!"),
             }
-            let m = w * h - 10;
-            assert!(T::new(h, w, m, (0, 0)).is_ok());
+
+            m = w * h - 9;
+            difficulty = Difficulty::custom(h, w, m);
+            match T::new(difficulty, start_from) {
+                Err(Error::TooManyMines) => (),
+                Err(_) => {
+                    panic!("Wrong error: MineSweeper::new should panic with Error::TooManyMines!")
+                }
+                Ok(_) => panic!("MineSweeper::new should panic!"),
+            }
+
+            m = w * h - 10;
+            difficulty = Difficulty::custom(h, w, m);
+            assert!(T::new(difficulty, start_from).is_ok());
         }
+
         test::<MSMatrix>();
         test::<MSHash>();
     }
@@ -361,14 +487,17 @@ mod implementations_tests {
     #[test]
     fn start_from() {
         fn test<T: MineSweeper>() {
-            for _ in 0..1000 {
-                let mut rng = rand::thread_rng();
-                let (h, w, m) = (100, 150, 250);
+            let mut rng = rand::thread_rng();
+            for _ in 0..100 {
+                let difficulty = Difficulty::hard();
+                let (h, w, _) = difficulty.into();
                 let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-                let ms: T = T::new(h, w, m, start_from).unwrap();
+                let ms: T = T::new(difficulty, start_from).unwrap();
+
                 let mut should_be_safe = iter_neighbors(start_from, h, w)
                     .unwrap()
                     .map(|(r, c)| ms.get_cell((r, c)).unwrap().content);
+
                 assert_eq!(
                     ms.get_cell(start_from).unwrap().content,
                     CellContent::Number(0)
@@ -376,6 +505,7 @@ mod implementations_tests {
                 assert!(!should_be_safe.any(|cell_content| cell_content == CellContent::Mine));
             }
         }
+
         test::<MSMatrix>();
         test::<MSHash>();
     }
@@ -383,16 +513,22 @@ mod implementations_tests {
     #[test]
     fn invalid_start_from() {
         fn test<T: MineSweeper>() {
-            let (h, w, m) = (10, 15, 25);
+            let difficulty = Difficulty::hard();
+            let (h, w, _) = difficulty.into();
             let start_from = (h, w);
-            match T::new(h, w, m, start_from) {
+
+            match T::new(difficulty, start_from) {
                 Err(Error::OutOfBounds) => (),
-                Err(_) => panic!("Wrong error: MSMatrix::new should panic as Error::OutOfBounds!"),
-                Ok(_) => panic!("MSMatrix::new should panic!"),
+                Err(_) => {
+                    panic!("Wrong error: MineSweeper::new should panic with Error::OutOfBounds!")
+                }
+                Ok(_) => panic!("MineSweeper::new should panic!"),
             }
+
             let start_from = (h - 1, w - 1);
-            assert!(T::new(h, w, m, start_from).is_ok());
+            assert!(T::new(difficulty, start_from).is_ok());
         }
+
         test::<MSMatrix>();
         test::<MSHash>();
     }
@@ -406,15 +542,21 @@ mod implementations_tests {
             T: MineSweeper + Display,
             E: MineSweeper + Display,
         {
-            let mut rng = StdRng::seed_from_u64(6);
-            let (h, w, m) = (10, 15, 25);
+            let seed = rand::thread_rng().gen();
+            let mut rng = StdRng::seed_from_u64(seed);
+            let difficulty = Difficulty::custom(10, 15, 25);
+            let (h, w, m) = difficulty.into();
             let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-            let mut ms_1 = T::from_rng(h, w, m, start_from, &mut rng.clone()).unwrap();
-            let mut ms_2 = E::from_rng(h, w, m, start_from, &mut rng.clone()).unwrap();
+            let mut ms_1 = T::from_rng(difficulty, start_from, &mut rng.clone()).unwrap();
+            let mut ms_2 = E::from_rng(difficulty, start_from, &mut rng.clone()).unwrap();
+
             assert_eq!(ms_1.to_string(), ms_2.to_string());
+
+            // compares the raw content of all cells between the two implementations
+            // and flags 5% of the mines, comparing again
             for i in 0..h {
                 for j in 0..w {
-                    assert_eq!(ms_1.get_cell((i, j)), ms_2.get_cell((i, j)));
+                    assert_eq!(ms_1.get_cell((i, j)), ms_2.get_cell((i, j)), "ciao");
                     if let CellContent::Mine = ms_1.get_cell((i, j)).unwrap().content {
                         if rng.gen_range(0..100) <= 5 {
                             assert_eq!(ms_1.toggle_flag((i, j)), ms_2.toggle_flag((i, j)));
@@ -423,30 +565,32 @@ mod implementations_tests {
                 }
             }
             assert_eq!(format!("{:#}", ms_1), format!("{:#}", ms_2));
-            let (mut msm_open, mut msh_open): (OpenResult, OpenResult);
+
+            let (mut ms_1_open, mut ms_2_open);
             // opening the whole grid and comparing strings could take a lot of time for big grids
             // or when the grid has a lot of flags
             for i in 0..h {
                 for j in 0..w {
-                    msm_open = ms_1.open((i, j)).unwrap();
-                    msh_open = ms_2.open((i, j)).unwrap();
-                    assert_eq!(msm_open, msh_open);
+                    ms_1_open = ms_1.open((i, j)).unwrap();
+                    ms_2_open = ms_2.open((i, j)).unwrap();
+                    assert_eq!(ms_1_open, ms_2_open);
                     assert_eq!(format!("{:#}", ms_1), format!("{:#}", ms_2));
                 }
             }
         }
+
         test::<MSMatrix, MSHash>();
     }
 }
 
 #[cfg(test)]
-mod formatter_tests {
+mod test_formatter {
     use crate::{MSMatrix, MineSweeper};
 
     #[test]
     fn simple_formatter() {
         let start_from = (0, 0);
-        let mut ms = MSMatrix::new(5, 5, 5, start_from).unwrap();
+        let mut ms = MSMatrix::new((5, 5, 5).into(), start_from).unwrap();
         let mut expected = r#"
 CCCCC
 CCCCC
@@ -457,7 +601,7 @@ CCCCC
             .to_string();
         assert_eq!(expected, format!("{:}", ms));
 
-        ms = MSMatrix::new(5, 11, 5, start_from).unwrap();
+        ms = MSMatrix::new((5, 11, 5).into(), start_from).unwrap();
         expected = r#"
 CCCCCCCCCCC
 CCCCCCCCCCC
@@ -468,7 +612,7 @@ CCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:}", ms));
 
-        ms = MSMatrix::new(11, 12, 5, start_from).unwrap();
+        ms = MSMatrix::new((11, 12, 5).into(), start_from).unwrap();
         expected = r#"
 CCCCCCCCCCCC
 CCCCCCCCCCCC
@@ -489,7 +633,7 @@ CCCCCCCCCCCC
     #[test]
     fn alternate_formatter() {
         let start_from = (0, 0);
-        let mut ms = MSMatrix::new(5, 5, 5, start_from).unwrap();
+        let mut ms = MSMatrix::new((5, 5, 5).into(), start_from).unwrap();
         let mut expected = r#"
 🟪🟪🟪🟪🟪
 🟪🟪🟪🟪🟪
@@ -500,7 +644,7 @@ CCCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:#}", ms));
 
-        ms = MSMatrix::new(5, 11, 5, start_from).unwrap();
+        ms = MSMatrix::new((5, 11, 5).into(), start_from).unwrap();
         expected = r#"
 🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
 🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
@@ -511,7 +655,7 @@ CCCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:#}", ms));
 
-        ms = MSMatrix::new(11, 12, 5, start_from).unwrap();
+        ms = MSMatrix::new((11, 12, 5).into(), start_from).unwrap();
         expected = r#"
 🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
 🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
@@ -532,7 +676,7 @@ CCCCCCCCCCCC
     #[test]
     fn precision_formatter() {
         let start_from = (0, 0);
-        let mut ms = MSMatrix::new(5, 5, 5, start_from).unwrap();
+        let mut ms = MSMatrix::new((5, 5, 5).into(), start_from).unwrap();
         let mut expected = r#"
    01234
 
@@ -545,7 +689,7 @@ CCCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:.0}", ms));
 
-        ms = MSMatrix::new(5, 11, 5, start_from).unwrap();
+        ms = MSMatrix::new((5, 11, 5).into(), start_from).unwrap();
         expected = r#"
              1
    01234567890
@@ -559,7 +703,7 @@ CCCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:.0}", ms));
 
-        ms = MSMatrix::new(11, 12, 5, start_from).unwrap();
+        ms = MSMatrix::new((11, 12, 5).into(), start_from).unwrap();
         expected = r#"
               11
     012345678901
@@ -583,7 +727,7 @@ CCCCCCCCCCCC
     #[test]
     fn full_formatter() {
         let start_from = (0, 0);
-        let mut ms = MSMatrix::new(5, 5, 5, start_from).unwrap();
+        let mut ms = MSMatrix::new((5, 5, 5).into(), start_from).unwrap();
         let mut expected = r#"
 🟫  0️⃣1️⃣2️⃣3️⃣4️⃣
 
@@ -596,7 +740,7 @@ CCCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:#.0}", ms));
 
-        ms = MSMatrix::new(5, 11, 5, start_from).unwrap();
+        ms = MSMatrix::new((5, 11, 5).into(), start_from).unwrap();
         expected = r#"
 🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣
 🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣
@@ -610,7 +754,7 @@ CCCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:#.0}", ms));
 
-        ms = MSMatrix::new(11, 12, 5, start_from).unwrap();
+        ms = MSMatrix::new((11, 12, 5).into(), start_from).unwrap();
         expected = r#"
 🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣
 🟫🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣
@@ -629,5 +773,26 @@ CCCCCCCCCCCC
 "#[1..]
             .to_string();
         assert_eq!(expected, format!("{:#.0}", ms));
+    }
+}
+
+#[cfg(test)]
+mod test_types {
+    use crate::Difficulty;
+    #[test]
+    fn difficulty() {
+        let mut difficulty: Difficulty;
+
+        difficulty = (10, 10, 0.1).into();
+        assert_eq!(difficulty, Difficulty::custom(10, 10, 10));
+
+        difficulty = (10, 10, 1.0).into();
+        assert_eq!(difficulty, Difficulty::custom(10, 10, 100));
+
+        difficulty = (10, 10, 0.0).into();
+        assert_eq!(difficulty, Difficulty::custom(10, 10, 0));
+
+        difficulty = (10, 10, 0.5).into();
+        assert_eq!(difficulty, Difficulty::custom(10, 10, 50));
     }
 }
