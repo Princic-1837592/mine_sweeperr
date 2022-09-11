@@ -1,5 +1,6 @@
 use crate::{
-    iter_neighbors, CellContent, Difficulty, Error, MSHash, MSMatrix, MineSweeper, NonDeterministic,
+    iter_neighbors, solver::NonDeterministic, CellContent, Difficulty, Error, MSHash, MSMatrix,
+    MineSweeper,
 };
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use std::fmt::Display;
@@ -193,5 +194,57 @@ fn compare_implementations() {
 
     for seed in 0..1 {
         test::<MSMatrix, MSHash>(seed);
+    }
+}
+
+#[test]
+fn game_state() {
+    fn test<T: MineSweeper>(_seed: u64) {
+        // let mut rng = StdRng::seed_from_u64(seed);
+        let mut rng = thread_rng();
+
+        let difficulty = Difficulty::easy();
+        let (h, w, m) = difficulty.into();
+        let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
+        let mut ms = T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng).unwrap();
+
+        assert_eq!(ms.height(), h);
+        assert_eq!(ms.width(), w);
+        assert_eq!(ms.mines(), m);
+
+        // flags ~60% of the mines
+        let (mut flagged, mut mines_left) = (0, m);
+        for i in 0..h {
+            for j in 0..w {
+                if let CellContent::Mine = ms.get_cell((i, j)).unwrap().content {
+                    if rng.gen_range(0..100) <= 60 {
+                        assert!(ms.toggle_flag((i, j)).is_ok());
+                        mines_left -= 1;
+                        flagged += 1;
+                    }
+                }
+            }
+        }
+
+        assert_eq!(ms.get_game_state().mines_left, mines_left);
+        assert_eq!(ms.get_game_state().flagged, flagged);
+
+        // opens all cells
+        let mut opened = 0;
+        let mut open_result;
+        for i in 0..h {
+            for j in 0..w {
+                open_result = ms.open((i, j));
+                assert!(open_result.is_ok());
+
+                opened += open_result.unwrap().cells_opened;
+                assert_eq!(ms.get_game_state().opened, opened);
+            }
+        }
+    }
+
+    for seed in 0..1 {
+        test::<MSMatrix>(seed);
+        test::<MSHash>(seed);
     }
 }

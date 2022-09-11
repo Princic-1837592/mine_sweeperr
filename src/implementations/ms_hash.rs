@@ -1,6 +1,6 @@
 use crate::{
-    check, iter_neighbors, Cell, CellContent, CellState, Coordinate, Difficulty, Error, GameState,
-    MineSweeper, OpenResult, Result, Solver,
+    check, iter_neighbors, solver::Solver, Cell, CellContent, CellState, Coordinate, Difficulty,
+    Error, GameState, MineSweeper, OpenResult, Result,
 };
 use rand::Rng;
 use std::collections::{HashSet, VecDeque};
@@ -9,7 +9,7 @@ use std::fmt::{Display, Formatter};
 /// Represents a grid using [`HashSets`](HashSet) of [`Coordinates`](Coordinate).
 /// Use this when you don't want to load the whole grid in memory at the beginning.
 /// Has lower performances when opening cells but takes less memory.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MSHash {
     height: usize,
     width: usize,
@@ -171,7 +171,11 @@ impl MineSweeper for MSHash {
     }
 
     fn get_game_state(&self) -> GameState {
-        todo!()
+        GameState {
+            opened: self.open.len(),
+            flagged: self.flagged.len(),
+            mines_left: self.mines.len() - self.flagged.len(),
+        }
     }
 }
 

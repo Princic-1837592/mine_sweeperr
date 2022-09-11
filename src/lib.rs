@@ -8,7 +8,7 @@
 //!
 //! to use it.
 //! ```
-//! use mine_sweeperr::{MSMatrix, MineSweeper, Difficulty, NonDeterministic};
+//! use mine_sweeperr::{MSMatrix, MineSweeper, Difficulty, solver::NonDeterministic};
 //!
 //! // Create a new game with a 16x16 board and 40 mines
 //! // setting the starting point at (0, 0)
@@ -32,13 +32,13 @@
 
 mod implementations;
 mod macros;
-mod solver;
+pub mod solver;
 mod utils;
 
 #[cfg(test)]
 mod tests;
 
-pub use crate::solver::*;
+use solver::Solver;
 pub use implementations::*;
 use rand::Rng;
 use std::fmt::{Display, Formatter};
@@ -375,4 +375,6 @@ pub trait MineSweeper: Sized {
         }
         Ok(())
     }
+    // todo
+    // fn from_triple(height:usize, width:usize, mines:Vec<Coordinate>) -> Self;
 }

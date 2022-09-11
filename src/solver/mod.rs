@@ -1,17 +1,18 @@
 mod csp;
+mod single_point;
 
 #[cfg(test)]
 mod tests;
 
-use crate::{Coordinate, MSMatrix, MineSweeper, Result};
-use std::cell::Ref;
+use crate::{Coordinate, MineSweeper, Result};
+pub use csp::CSPSolver;
 
 pub trait Solver<M>
 where
     M: MineSweeper,
 {
     fn new() -> Self;
-    fn solve(board: M, start_from: Coordinate) -> Result<bool>;
+    fn solve(ms: M, start_from: Coordinate) -> Result<bool>;
 }
 
 pub struct NonDeterministic {}
@@ -21,7 +22,7 @@ where
     M: MineSweeper,
 {
     fn new() -> Self {
-        Self {}
+        NonDeterministic {}
     }
 
     fn solve(_: M, _: Coordinate) -> Result<bool> {

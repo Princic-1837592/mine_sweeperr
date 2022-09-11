@@ -1,22 +1,23 @@
 use crate::{
-    check, iter_neighbors, Cell, CellContent, CellState, Coordinate, Difficulty, Error, GameState,
-    MineSweeper, OpenResult, Result, Solver,
+    check, iter_neighbors, solver::Solver, Cell, CellContent, CellState, Coordinate, Difficulty,
+    Error, GameState, MineSweeper, OpenResult, Result,
 };
 use rand::Rng;
-use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
 
 /// Represents the grid using a matrix of [`cells`](Cell).
 /// Use this when you want to load the whole grid in memory at the beginning.
 /// Has higher performances when opening cells but takes more memory.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MSMatrix {
     height: usize,
     width: usize,
     mines: usize,
     cells: Vec<Vec<Cell>>,
     start_from: Coordinate,
+    opened: usize,
+    flagged: usize,
 }
 
 impl MSMatrix {
@@ -28,6 +29,8 @@ impl MSMatrix {
             mines,
             cells: vec![vec![Cell::default(); width]; height],
             start_from,
+            opened: 0,
+            flagged: 0,
         }
     }
 
@@ -80,11 +83,7 @@ impl MSMatrix {
 }
 
 impl MineSweeper for MSMatrix {
-    fn from_rng<S, R>(
-        difficulty: Difficulty,
-        start_from: Coordinate,
-        rng: &mut R,
-    ) -> Result<Self>
+    fn from_rng<S, R>(difficulty: Difficulty, start_from: Coordinate, rng: &mut R) -> Result<Self>
     where
         S: Solver<Self>,
         R: Rng,
@@ -133,6 +132,7 @@ impl MineSweeper for MSMatrix {
                 }
             }
         }
+        self.opened += cells_opened;
         Ok(OpenResult::new(
             self.cells[r][c],
             cells_opened,
@@ -146,10 +146,12 @@ impl MineSweeper for MSMatrix {
         match self.cells[r][c].state {
             CellState::Closed => {
                 self.cells[r][c].state = CellState::Flagged;
+                self.flagged += 1;
                 Ok(CellState::Flagged)
             }
             CellState::Flagged => {
                 self.cells[r][c].state = CellState::Closed;
+                self.flagged -= 1;
                 Ok(CellState::Closed)
             }
             _ => Err(Error::AlreadyOpen),
@@ -178,7 +180,11 @@ impl MineSweeper for MSMatrix {
     }
 
     fn get_game_state(&self) -> GameState {
-        todo!()
+        GameState {
+            opened: self.opened,
+            flagged: self.flagged,
+            mines_left: self.mines - self.flagged,
+        }
     }
 }
 

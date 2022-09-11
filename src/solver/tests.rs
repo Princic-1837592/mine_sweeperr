@@ -1,9 +1,8 @@
 use crate::{
-    solver::{csp::solver::CSPSolver, Solver},
-    Difficulty, MSMatrix, MineSweeper, NonDeterministic,
+    solver::{CSPSolver, NonDeterministic, Solver},
+    Difficulty, MSMatrix, MineSweeper,
 };
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::cell::RefCell;
 
 #[test]
 #[ignore]
@@ -28,7 +27,7 @@ fn solve() {
         // );
     }
 
-    for seed in 0..100 {
+    for seed in 0..10 {
         test::<CSPSolver<MSMatrix>, _>(seed);
     }
 }

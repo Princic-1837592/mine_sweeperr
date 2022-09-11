@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test_formatter {
-    use crate::{MSMatrix, MineSweeper, NonDeterministic};
+    use crate::{solver::NonDeterministic, MSMatrix, MineSweeper};
 
     #[test]
     fn simple_formatter() {
@@ -210,11 +210,4 @@ mod test_types {
         difficulty = (10, 10, 0.5).into();
         assert_eq!(difficulty, Difficulty::custom(10, 10, 50));
     }
-}
-
-#[cfg(test)]
-mod test_oters {
-    use crate::solver::Solver;
-    use crate::{MSMatrix, MineSweeper};
-    use std::marker::PhantomData;
 }
