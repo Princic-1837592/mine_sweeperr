@@ -8,11 +8,11 @@
 //!
 //! to use it.
 //! ```
-//! use mine_sweeperr::{MSMatrix, MineSweeper, Difficulty};
+//! use mine_sweeperr::{MSMatrix, MineSweeper, Difficulty, NonDeterministic};
 //!
 //! // Create a new game with a 16x16 board and 40 mines
 //! // setting the starting point at (0, 0)
-//! let mut ms: MSMatrix = MSMatrix::new(Difficulty::medium(), (0, 0)).unwrap();
+//! let mut ms: MSMatrix = MSMatrix::new::<NonDeterministic>(Difficulty::medium(), (0, 0)).unwrap();
 //!
 //! // Reveal the cell at (0, 0)
 //! ms.open((0, 0)).unwrap();
@@ -38,7 +38,9 @@ mod utils;
 #[cfg(test)]
 mod tests;
 
+pub use crate::solver::*;
 pub use implementations::*;
+use rand::Rng;
 use std::fmt::{Display, Formatter};
 pub use utils::*;
 
@@ -229,7 +231,6 @@ pub struct Difficulty {
     height: usize,
     width: usize,
     mines: usize,
-    deterministic: bool,
 }
 
 impl Difficulty {
@@ -238,7 +239,6 @@ impl Difficulty {
             height,
             width,
             mines,
-            deterministic: true,
         }
     }
 
@@ -261,36 +261,11 @@ impl Difficulty {
     pub fn from_density(height: usize, width: usize, density: f32) -> Self {
         Self::new(height, width, ((height * width) as f32 * density) as usize)
     }
-
-    pub const fn deterministic(self) -> Self {
-        Self {
-            deterministic: true,
-            ..self
-        }
-    }
-
-    pub const fn non_deterministic(self) -> Self {
-        Self {
-            deterministic: false,
-            ..self
-        }
-    }
 }
 
 impl From<Difficulty> for (usize, usize, usize) {
     fn from(difficulty: Difficulty) -> (usize, usize, usize) {
         (difficulty.height, difficulty.width, difficulty.mines)
-    }
-}
-
-impl From<Difficulty> for (usize, usize, usize, bool) {
-    fn from(difficulty: Difficulty) -> (usize, usize, usize, bool) {
-        (
-            difficulty.height,
-            difficulty.width,
-            difficulty.mines,
-            difficulty.deterministic,
-        )
     }
 }
 
@@ -325,17 +300,19 @@ pub trait MineSweeper: Sized {
     /// - Returns [`OutOfBounds`](Error::OutOfBounds) if the starting point is out of bounds.
     ///
     /// If not overridden, the default rng used is [`rand::thread_rng()`](rand::thread_rng()).
-    fn new(difficulty: Difficulty, start_from: Coordinate) -> Result<Self> {
-        Self::from_rng(difficulty, start_from, &mut rand::thread_rng())
+    fn new<S>(difficulty: Difficulty, start_from: Coordinate) -> Result<Self>
+    where
+        S: Solver<Self>,
+    {
+        Self::from_rng::<S, _>(difficulty, start_from, &mut rand::thread_rng())
     }
     /// Creates a new instance of the game using the given random generator.
     /// Can be used to test the game or to reproduce a specific game by passing a seeded rng.
     /// Read more about constraints in a newly created game [here](MineSweeper::new).
-    fn from_rng(
-        difficulty: Difficulty,
-        start_from: Coordinate,
-        rng: &mut impl rand::Rng,
-    ) -> Result<Self>;
+    fn from_rng<S, R>(difficulty: Difficulty, start_from: Coordinate, rng: &mut R) -> Result<Self>
+    where
+        S: Solver<Self>,
+        R: Rng;
     /// Tries to open a cell.
     ///
     /// Returns an error if the cell is out of bounds,

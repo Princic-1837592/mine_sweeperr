@@ -1,4 +1,6 @@
-use crate::{iter_neighbors, CellContent, Difficulty, Error, MSHash, MSMatrix, MineSweeper};
+use crate::{
+    iter_neighbors, CellContent, Difficulty, Error, MSHash, MSMatrix, MineSweeper, NonDeterministic,
+};
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use std::fmt::Display;
 
@@ -13,7 +15,7 @@ fn play() {
         let difficulty = Difficulty::medium();
         let (h, w, m) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-        let mut ms = T::from_rng(difficulty, start_from, &mut rng).unwrap();
+        let mut ms = T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng).unwrap();
 
         assert_eq!(ms.height(), h);
         assert_eq!(ms.width(), w);
@@ -55,7 +57,7 @@ fn invalid_number_of_mines() {
         let mut difficulty = Difficulty::custom(h, w, m);
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
 
-        match T::from_rng(difficulty, start_from, &mut rng) {
+        match T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng) {
             Err(Error::TooManyMines) => (),
             Err(_) => {
                 panic!("Wrong error: MineSweeper::new should panic with Error::TooManyMines!")
@@ -65,7 +67,7 @@ fn invalid_number_of_mines() {
 
         m = w * h - 9;
         difficulty = Difficulty::custom(h, w, m);
-        match T::from_rng(difficulty, start_from, &mut rng) {
+        match T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng) {
             Err(Error::TooManyMines) => (),
             Err(_) => {
                 panic!("Wrong error: MineSweeper::new should panic with Error::TooManyMines!")
@@ -75,7 +77,7 @@ fn invalid_number_of_mines() {
 
         m = w * h - 10;
         difficulty = Difficulty::custom(h, w, m);
-        assert!(T::new(difficulty, start_from).is_ok());
+        assert!(T::new::<NonDeterministic>(difficulty, start_from).is_ok());
     }
 
     for seed in 0..10 {
@@ -93,7 +95,7 @@ fn start_from() {
         let difficulty = Difficulty::hard();
         let (h, w, _) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-        let ms: T = T::new(difficulty, start_from).unwrap();
+        let ms: T = T::new::<NonDeterministic>(difficulty, start_from).unwrap();
 
         let mut should_be_safe = iter_neighbors(start_from, h, w)
             .unwrap()
@@ -122,7 +124,7 @@ fn invalid_start_from() {
         let (h, w, _) = difficulty.into();
         let start_from = (h, w);
 
-        match T::from_rng(difficulty, start_from, &mut rng) {
+        match T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng) {
             Err(Error::OutOfBounds) => (),
             Err(_) => {
                 panic!("Wrong error: MineSweeper::new should panic with Error::OutOfBounds!")
@@ -131,7 +133,7 @@ fn invalid_start_from() {
         }
 
         let start_from = (h - 1, w - 1);
-        assert!(T::new(difficulty, start_from).is_ok());
+        assert!(T::new::<NonDeterministic>(difficulty, start_from).is_ok());
     }
 
     for seed in 0..10 {
@@ -155,8 +157,10 @@ fn compare_implementations() {
         let difficulty = Difficulty::custom(10, 15, 25);
         let (h, w, m) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-        let mut ms_1 = T::from_rng(difficulty, start_from, &mut rng.clone()).unwrap();
-        let mut ms_2 = E::from_rng(difficulty, start_from, &mut rng.clone()).unwrap();
+        let mut ms_1 =
+            T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng.clone()).unwrap();
+        let mut ms_2 =
+            E::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng.clone()).unwrap();
 
         assert_eq!(ms_1.to_string(), ms_2.to_string());
 

@@ -1,15 +1,16 @@
 use crate::{
     check, iter_neighbors, Cell, CellContent, CellState, Coordinate, Difficulty, Error, GameState,
-    MineSweeper, OpenResult, Result,
+    MineSweeper, OpenResult, Result, Solver,
 };
 use rand::Rng;
+use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
 
 /// Represents the grid using a matrix of [`cells`](Cell).
 /// Use this when you want to load the whole grid in memory at the beginning.
 /// Has higher performances when opening cells but takes more memory.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct MSMatrix {
     height: usize,
     width: usize,
@@ -79,15 +80,24 @@ impl MSMatrix {
 }
 
 impl MineSweeper for MSMatrix {
-    fn from_rng(
+    fn from_rng<S, R>(
         difficulty: Difficulty,
         start_from: Coordinate,
-        rng: &mut impl Rng,
-    ) -> Result<Self> {
+        rng: &mut R,
+    ) -> Result<Self>
+    where
+        S: Solver<Self>,
+        R: Rng,
+    {
         let difficulty @ (height, width, mines) = difficulty.into();
         check!(difficulty, start_from);
         let mut result = Self::new_unchecked(height, width, mines, start_from);
-        result.randomize_mines(mines, start_from, rng);
+        loop {
+            result.randomize_mines(mines, start_from, rng);
+            if S::solve(result.clone(), start_from).unwrap_or(false) {
+                break;
+            }
+        }
         Ok(result)
     }
 

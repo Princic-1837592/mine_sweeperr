@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod test_formatter {
-    use crate::{MSMatrix, MineSweeper};
+    use crate::{MSMatrix, MineSweeper, NonDeterministic};
 
     #[test]
     fn simple_formatter() {
         let start_from = (0, 0);
-        let mut ms = MSMatrix::new((5, 5, 5).into(), start_from).unwrap();
+        let mut ms = MSMatrix::new::<NonDeterministic>((5, 5, 5).into(), start_from).unwrap();
         let mut expected = r#"
 CCCCC
 CCCCC
@@ -16,7 +16,7 @@ CCCCC
             .to_string();
         assert_eq!(expected, format!("{:}", ms));
 
-        ms = MSMatrix::new((5, 11, 5).into(), start_from).unwrap();
+        ms = MSMatrix::new::<NonDeterministic>((5, 11, 5).into(), start_from).unwrap();
         expected = r#"
 CCCCCCCCCCC
 CCCCCCCCCCC
@@ -27,7 +27,7 @@ CCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:}", ms));
 
-        ms = MSMatrix::new((11, 12, 5).into(), start_from).unwrap();
+        ms = MSMatrix::new::<NonDeterministic>((11, 12, 5).into(), start_from).unwrap();
         expected = r#"
 CCCCCCCCCCCC
 CCCCCCCCCCCC
@@ -48,7 +48,7 @@ CCCCCCCCCCCC
     #[test]
     fn alternate_formatter() {
         let start_from = (0, 0);
-        let mut ms = MSMatrix::new((5, 5, 5).into(), start_from).unwrap();
+        let mut ms = MSMatrix::new::<NonDeterministic>((5, 5, 5).into(), start_from).unwrap();
         let mut expected = r#"
 🟪🟪🟪🟪🟪
 🟪🟪🟪🟪🟪
@@ -59,7 +59,7 @@ CCCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:#}", ms));
 
-        ms = MSMatrix::new((5, 11, 5).into(), start_from).unwrap();
+        ms = MSMatrix::new::<NonDeterministic>((5, 11, 5).into(), start_from).unwrap();
         expected = r#"
 🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
 🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
@@ -70,7 +70,7 @@ CCCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:#}", ms));
 
-        ms = MSMatrix::new((11, 12, 5).into(), start_from).unwrap();
+        ms = MSMatrix::new::<NonDeterministic>((11, 12, 5).into(), start_from).unwrap();
         expected = r#"
 🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
 🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪🟪
@@ -91,7 +91,7 @@ CCCCCCCCCCCC
     #[test]
     fn precision_formatter() {
         let start_from = (0, 0);
-        let mut ms = MSMatrix::new((5, 5, 5).into(), start_from).unwrap();
+        let mut ms = MSMatrix::new::<NonDeterministic>((5, 5, 5).into(), start_from).unwrap();
         let mut expected = r#"
    01234
 
@@ -104,7 +104,7 @@ CCCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:.0}", ms));
 
-        ms = MSMatrix::new((5, 11, 5).into(), start_from).unwrap();
+        ms = MSMatrix::new::<NonDeterministic>((5, 11, 5).into(), start_from).unwrap();
         expected = r#"
              1
    01234567890
@@ -118,7 +118,7 @@ CCCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:.0}", ms));
 
-        ms = MSMatrix::new((11, 12, 5).into(), start_from).unwrap();
+        ms = MSMatrix::new::<NonDeterministic>((11, 12, 5).into(), start_from).unwrap();
         expected = r#"
               11
     012345678901
@@ -142,7 +142,7 @@ CCCCCCCCCCCC
     #[test]
     fn full_formatter() {
         let start_from = (0, 0);
-        let mut ms = MSMatrix::new((5, 5, 5).into(), start_from).unwrap();
+        let mut ms = MSMatrix::new::<NonDeterministic>((5, 5, 5).into(), start_from).unwrap();
         let mut expected = r#"
 🟫  0️⃣1️⃣2️⃣3️⃣4️⃣
 
@@ -155,7 +155,7 @@ CCCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:#.0}", ms));
 
-        ms = MSMatrix::new((5, 11, 5).into(), start_from).unwrap();
+        ms = MSMatrix::new::<NonDeterministic>((5, 11, 5).into(), start_from).unwrap();
         expected = r#"
 🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣
 🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣
@@ -169,7 +169,7 @@ CCCCCCCCCCCC
             .to_string();
         assert_eq!(expected, format!("{:#.0}", ms));
 
-        ms = MSMatrix::new((11, 12, 5).into(), start_from).unwrap();
+        ms = MSMatrix::new::<NonDeterministic>((11, 12, 5).into(), start_from).unwrap();
         expected = r#"
 🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣
 🟫🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣
@@ -217,69 +217,4 @@ mod test_oters {
     use crate::solver::Solver;
     use crate::{MSMatrix, MineSweeper};
     use std::marker::PhantomData;
-
-    fn return_generic_type() {
-        struct Difficulty<S, M>
-        where
-            S: Solver<M>,
-            M: MineSweeper,
-        {
-            height: usize,
-            width: usize,
-            mines: usize,
-            deterministic: bool,
-            phantom: PhantomData<(S, M)>,
-        }
-
-        impl<S, M> Difficulty<S, M>
-        where
-            S: Solver<M>,
-            M: MineSweeper,
-        {
-            const fn new(height: usize, width: usize, mines: usize) -> Self {
-                Difficulty {
-                    height,
-                    width,
-                    mines,
-                    deterministic: true,
-                    phantom: PhantomData,
-                }
-            }
-
-            pub const fn easy() -> Self {
-                Self::new(9, 9, 10)
-            }
-
-            pub const fn medium() -> Self {
-                Self::new(16, 16, 40)
-            }
-
-            pub const fn hard() -> Self {
-                Self::new(16, 30, 99)
-            }
-
-            pub const fn custom(height: usize, width: usize, mines: usize) -> Self {
-                Self::new(height, width, mines)
-            }
-
-            pub fn from_density(height: usize, width: usize, density: f32) -> Self {
-                Self::new(height, width, ((height * width) as f32 * density) as usize)
-            }
-
-            pub const fn deterministic(self) -> Self {
-                Self {
-                    deterministic: true,
-                    ..self
-                }
-            }
-
-            pub const fn non_deterministic(self) -> Self {
-                Self {
-                    deterministic: false,
-                    ..self
-                }
-            }
-        }
-        let difficulty = Difficulty::easy();
-    }
 }
