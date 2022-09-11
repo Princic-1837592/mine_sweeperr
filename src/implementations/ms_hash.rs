@@ -16,17 +16,19 @@ pub struct MSHash {
     open: HashSet<Coordinate>,
     flagged: HashSet<Coordinate>,
     mines: HashSet<Coordinate>,
+    start_from: Coordinate,
 }
 
 impl MSHash {
     /// Creates a new instance.
-    fn new_unchecked(height: usize, width: usize, mines: usize) -> Self {
+    fn new_unchecked(height: usize, width: usize, mines: usize, start_from: Coordinate) -> Self {
         Self {
             height,
             width,
             open: Default::default(),
             flagged: Default::default(),
             mines: HashSet::with_capacity(mines),
+            start_from,
         }
     }
 
@@ -78,7 +80,7 @@ impl MineSweeper for MSHash {
     ) -> Result<Self> {
         let difficulty @ (height, width, mines, _deterministic) = difficulty.into();
         check!(difficulty, start_from);
-        let mut result = Self::new_unchecked(height, width, mines);
+        let mut result = Self::new_unchecked(height, width, mines, start_from);
         result.randomize_mines(mines, start_from, rng);
         Ok(result)
     }
@@ -162,6 +164,10 @@ impl MineSweeper for MSHash {
 
     fn mines(&self) -> usize {
         self.mines.len()
+    }
+
+    fn started_from(&self) -> Coordinate {
+        self.start_from
     }
 
     fn get_game_state(&self) -> GameState {

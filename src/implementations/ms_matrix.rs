@@ -1,4 +1,7 @@
-use crate::{check, iter_neighbors, Cell, CellContent, CellState, Coordinate, Error, GameState, MineSweeper, OpenResult, Result, Difficulty};
+use crate::{
+    check, iter_neighbors, Cell, CellContent, CellState, Coordinate, Difficulty, Error, GameState,
+    MineSweeper, OpenResult, Result,
+};
 use rand::Rng;
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
@@ -12,16 +15,18 @@ pub struct MSMatrix {
     width: usize,
     mines: usize,
     cells: Vec<Vec<Cell>>,
+    start_from: Coordinate,
 }
 
 impl MSMatrix {
     /// Creates a new instance.
-    fn new_unchecked(height: usize, width: usize, mines: usize) -> Self {
+    fn new_unchecked(height: usize, width: usize, mines: usize, start_from: Coordinate) -> Self {
         Self {
             height,
             width,
             mines,
             cells: vec![vec![Cell::default(); width]; height],
+            start_from,
         }
     }
 
@@ -81,7 +86,7 @@ impl MineSweeper for MSMatrix {
     ) -> Result<Self> {
         let difficulty @ (height, width, mines) = difficulty.into();
         check!(difficulty, start_from);
-        let mut result = Self::new_unchecked(height, width, mines);
+        let mut result = Self::new_unchecked(height, width, mines, start_from);
         result.randomize_mines(mines, start_from, rng);
         Ok(result)
     }
@@ -156,6 +161,10 @@ impl MineSweeper for MSMatrix {
 
     fn mines(&self) -> usize {
         self.mines
+    }
+
+    fn started_from(&self) -> Coordinate {
+        self.start_from
     }
 
     fn get_game_state(&self) -> GameState {
