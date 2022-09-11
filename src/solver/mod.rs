@@ -6,6 +6,7 @@ mod tests;
 
 use crate::{Coordinate, MineSweeper, Result};
 pub use csp::CSPSolver;
+pub use single_point::SPSolver;
 
 pub trait Solver<M>
 where

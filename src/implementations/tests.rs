@@ -1,6 +1,6 @@
 use crate::{
     iter_neighbors, solver::NonDeterministic, CellContent, Difficulty, Error, GameState, MSHash,
-    MSMatrix, MineSweeper, OpenResult,
+    MSMatrix, MineSweeper,
 };
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use std::fmt::{Debug, Display};

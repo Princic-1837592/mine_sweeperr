@@ -1,5 +1,4 @@
-use crate::{Coordinate, MineSweeper};
-use std::cell::{Ref, RefCell};
+use crate::Coordinate;
 
 const UNKNOWN: i8 = -5;
 const CONSTRAINED: i8 = -4;

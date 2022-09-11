@@ -30,6 +30,7 @@
 //! A [working implementation](https://princic-1837592.github.io/mine_sweeper/index.html) of this library with wasm frontend
 //! is available on [my GitHub page](https://Princic-1837592.github.io)
 
+#![allow(unused)]
 mod implementations;
 mod macros;
 pub mod solver;

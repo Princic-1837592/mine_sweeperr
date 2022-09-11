@@ -1,7 +1,4 @@
-use crate::{
-    check, iter_neighbors, solver::Solver, Cell, CellContent, CellState, Coordinate, Difficulty,
-    Error, GameState, MineSweeper, OpenResult, Result,
-};
+use crate::{check, iter_neighbors, solver::Solver, Cell, CellContent, CellState, Coordinate, Difficulty, Error, GameState, MineSweeper, OpenResult, Result, count_neighboring_flags};
 use rand::Rng;
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
@@ -66,14 +63,6 @@ impl MSMatrix {
             });
     }
 
-    /// Counts the number of flags around a cell to propagate the opening procedure.
-    fn count_neighboring_flags(&self, coord: Coordinate) -> u8 {
-        iter_neighbors(coord, self.height, self.width)
-            .unwrap()
-            .filter(|(r, c)| self.cells[*r][*c].state == CellState::Flagged)
-            .count() as u8
-    }
-
     /// Checks the validity of a coordinate.
     fn check_coordinate(&self, (r, c): Coordinate) -> Result<()> {
         if r < self.height && c < self.width {
@@ -123,7 +112,7 @@ impl MineSweeper for MSMatrix {
                 }
                 if let CellContent::Number(neighboring_mines) = self.cells[r][c].content {
                     if neighboring_mines > 0
-                        && self.count_neighboring_flags(coord) >= neighboring_mines
+                        && count_neighboring_flags(self, coord) >= neighboring_mines
                     {
                         queue.extend(
                             iter_neighbors((r, c), self.height, self.width)

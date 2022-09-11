@@ -1,4 +1,4 @@
-use crate::{Coordinate, Error::OutOfBounds, Result};
+use crate::{CellContent, CellState, Coordinate, Error::OutOfBounds, MineSweeper, Result};
 use std::fmt::Write;
 
 /// Contains emoji numbers from 0 to 9. position 10 is the emoji to represent a 0-cell.
@@ -20,6 +20,39 @@ pub fn iter_neighbors(
             .flat_map(move |i| (c.saturating_sub(1)..=(c + 1).min(width - 1)).map(move |j| (i, j)))
             .filter(move |&pos| pos != coord))
     }
+}
+
+pub(crate) fn get_neighboring_flags(
+    ms: &impl MineSweeper,
+    coord: Coordinate,
+) -> impl Iterator<Item = Coordinate> + '_ {
+    iter_neighbors(coord, ms.height(), ms.width())
+        .unwrap()
+        .filter(|&neighbor| ms.get_cell(neighbor).unwrap().state == CellState::Flagged)
+}
+
+pub(crate) fn count_neighboring_flags(ms: &impl MineSweeper, coord: Coordinate) -> u8 {
+    get_neighboring_flags(ms, coord).count() as u8
+}
+
+// pub(crate) fn get_neighboring_mines(
+//     ms: &impl MineSweeper,
+//     coord: Coordinate,
+// ) -> impl Iterator<Item = Coordinate> + '_ {
+//     iter_neighbors(coord, ms.height(), ms.width())
+//         .unwrap()
+//         .filter(|&neighbor| ms.get_cell(neighbor).unwrap().content == CellContent::Mine)
+// }
+
+// pub(crate) fn count_neighboring_mines(ms: &impl MineSweeper, coord: Coordinate) -> u8 {
+//     get_neighboring_mines(ms, coord).count() as u8
+// }
+
+pub(crate) fn get_neighboring_closed(ms: &impl MineSweeper, coord: Coordinate) -> Vec<Coordinate> {
+    iter_neighbors(coord, ms.height(), ms.width())
+        .unwrap()
+        .filter(|&neighbor| ms.get_cell(neighbor).unwrap().state == CellState::Closed)
+        .collect()
 }
 
 /// Returns a string representing the superior numbers indicating columns, to be read in vertical.
