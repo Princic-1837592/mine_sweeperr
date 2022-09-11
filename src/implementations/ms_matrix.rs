@@ -18,6 +18,7 @@ pub struct MSMatrix {
     start_from: Coordinate,
     opened: usize,
     flagged: usize,
+    exploded: usize,
 }
 
 impl MSMatrix {
@@ -31,6 +32,7 @@ impl MSMatrix {
             start_from,
             opened: 0,
             flagged: 0,
+            exploded: 0,
         }
     }
 
@@ -133,6 +135,7 @@ impl MineSweeper for MSMatrix {
             }
         }
         self.opened += cells_opened;
+        self.exploded += mines_exploded;
         Ok(OpenResult::new(
             self.cells[r][c],
             cells_opened,
@@ -180,10 +183,17 @@ impl MineSweeper for MSMatrix {
     }
 
     fn get_game_state(&self) -> GameState {
+        // println!(
+        //     "--------------{} {} {} {}",
+        //     self.exploded,
+        //     self.mines,
+        //     self.flagged,
+        //     self.mines - self.flagged - self.exploded
+        // );
         GameState {
             opened: self.opened,
             flagged: self.flagged,
-            mines_left: self.mines - self.flagged,
+            mines_left: self.mines - self.flagged - self.exploded,
         }
     }
 }

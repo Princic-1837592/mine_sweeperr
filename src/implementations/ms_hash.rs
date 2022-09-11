@@ -17,6 +17,7 @@ pub struct MSHash {
     flagged: HashSet<Coordinate>,
     mines: HashSet<Coordinate>,
     start_from: Coordinate,
+    exploded: usize,
 }
 
 impl MSHash {
@@ -29,6 +30,7 @@ impl MSHash {
             flagged: Default::default(),
             mines: HashSet::with_capacity(mines),
             start_from,
+            exploded: 0,
         }
     }
 
@@ -118,6 +120,7 @@ impl MineSweeper for MSHash {
                 }
             }
         }
+        self.exploded += mines_exploded;
         Ok(OpenResult::new(
             self.get_cell(coord).unwrap(),
             cells_opened,
@@ -174,7 +177,7 @@ impl MineSweeper for MSHash {
         GameState {
             opened: self.open.len(),
             flagged: self.flagged.len(),
-            mines_left: self.mines.len() - self.flagged.len(),
+            mines_left: self.mines.len() - self.flagged.len() - self.exploded,
         }
     }
 }

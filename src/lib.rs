@@ -38,9 +38,9 @@ mod utils;
 #[cfg(test)]
 mod tests;
 
-use solver::Solver;
 pub use implementations::*;
 use rand::Rng;
+use solver::Solver;
 use std::fmt::{Display, Formatter};
 pub use utils::*;
 
@@ -92,6 +92,7 @@ impl OpenResult {
 }
 
 /// Represents the current state of the game
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GameState {
     pub flagged: usize,
     pub opened: usize,

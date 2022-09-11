@@ -1,9 +1,9 @@
 use crate::{
-    iter_neighbors, solver::NonDeterministic, CellContent, Difficulty, Error, MSHash, MSMatrix,
-    MineSweeper,
+    iter_neighbors, solver::NonDeterministic, CellContent, Difficulty, Error, GameState, MSHash,
+    MSMatrix, MineSweeper, OpenResult,
 };
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
 #[test]
 #[allow(unused_variables)]
@@ -199,7 +199,10 @@ fn compare_implementations() {
 
 #[test]
 fn game_state() {
-    fn test<T: MineSweeper>(_seed: u64) {
+    fn test<T>(_seed: u64)
+    where
+        T: MineSweeper + Display + Debug,
+    {
         // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
@@ -213,7 +216,7 @@ fn game_state() {
         assert_eq!(ms.mines(), m);
 
         // flags ~60% of the mines
-        let (mut flagged, mut mines_left) = (0, m);
+        let (mut flagged, mut mines_left, mut opened) = (0, m, 0);
         for i in 0..h {
             for j in 0..w {
                 if let CellContent::Mine = ms.get_cell((i, j)).unwrap().content {
@@ -221,6 +224,10 @@ fn game_state() {
                         assert!(ms.toggle_flag((i, j)).is_ok());
                         mines_left -= 1;
                         flagged += 1;
+                    } else if rng.gen_range(0..100) <= 50 {
+                        assert_eq!(ms.open((i, j)).unwrap().mines_exploded, 1);
+                        mines_left -= 1;
+                        opened += 1;
                     }
                 }
             }
@@ -230,7 +237,6 @@ fn game_state() {
         assert_eq!(ms.get_game_state().flagged, flagged);
 
         // opens all cells
-        let mut opened = 0;
         let mut open_result;
         for i in 0..h {
             for j in 0..w {
@@ -238,12 +244,28 @@ fn game_state() {
                 assert!(open_result.is_ok());
 
                 opened += open_result.unwrap().cells_opened;
-                assert_eq!(ms.get_game_state().opened, opened);
+                mines_left -= open_result.unwrap().mines_exploded;
+                assert_eq!(
+                    ms.get_game_state(),
+                    GameState {
+                        flagged,
+                        opened,
+                        mines_left
+                    }
+                );
             }
         }
+        assert_eq!(
+            ms.get_game_state(),
+            GameState {
+                flagged,
+                opened: h * w - flagged,
+                mines_left: 0
+            }
+        );
     }
 
-    for seed in 0..1 {
+    for seed in 0..100 {
         test::<MSMatrix>(seed);
         test::<MSHash>(seed);
     }
