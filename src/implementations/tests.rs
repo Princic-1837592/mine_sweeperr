@@ -6,14 +6,14 @@ use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use std::fmt::{Debug, Display};
 
 #[test]
-#[allow(unused_variables)]
-#[allow(unused_assignments)]
+// #[allow(unused_variables)]
+// #[allow(unused_assignments)]
 fn play() {
     fn test<T: MineSweeper + Display>(_seed: u64) {
         // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
-        let difficulty = Difficulty::medium();
+        let difficulty = Difficulty::easy();
         let (h, w, m) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
         let mut ms = T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng).unwrap();
@@ -32,18 +32,20 @@ fn play() {
                 }
             }
         }
+        // println!("{}", ms);
 
         // opens all cells
         for i in 0..h {
             for j in 0..w {
                 assert!(ms.open((i, j)).is_ok());
+                // println!("{}", ms);
             }
         }
     }
 
-    for seed in 0..10 {
+    for seed in 0..1 {
         test::<MSMatrix>(seed);
-        test::<MSHash>(seed);
+        // test::<MSHash>(seed);
     }
 }
 
@@ -96,7 +98,12 @@ fn start_from() {
         let difficulty = Difficulty::hard();
         let (h, w, _) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-        let ms: T = T::new::<NonDeterministic>(difficulty, start_from).unwrap();
+        let mut ms: T = T::new::<NonDeterministic>(difficulty, start_from).unwrap();
+
+        assert!(
+            ms.open(start_from).unwrap().cells_opened
+                >= iter_neighbors(start_from, h, w).unwrap().count()
+        );
 
         let mut should_be_safe = iter_neighbors(start_from, h, w)
             .unwrap()
@@ -144,8 +151,8 @@ fn invalid_start_from() {
 }
 
 #[test]
-#[allow(unused_variables)]
-#[allow(unused_assignments)]
+// #[allow(unused_variables)]
+// #[allow(unused_assignments)]
 fn compare_implementations() {
     fn test<T, E>(_seed: u64)
     where
@@ -155,7 +162,7 @@ fn compare_implementations() {
         let mut rng = StdRng::seed_from_u64(_seed);
         // let mut rng = thread_rng();
 
-        let difficulty = Difficulty::custom(10, 15, 25);
+        let difficulty = Difficulty::hard();
         let (h, w, m) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
         let mut ms_1 =
@@ -265,7 +272,7 @@ fn game_state() {
         );
     }
 
-    for seed in 0..100 {
+    for seed in 0..10 {
         test::<MSMatrix>(seed);
         test::<MSHash>(seed);
     }

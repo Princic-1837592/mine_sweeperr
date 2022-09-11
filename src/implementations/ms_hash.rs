@@ -109,9 +109,7 @@ impl MineSweeper for MSHash {
                     }
                 }
                 if let CellContent::Number(neighboring_mines) = cell.content {
-                    if neighboring_mines > 0
-                        && count_neighboring_flags(self, coord) >= neighboring_mines
-                    {
+                    if count_neighboring_flags(self, coord) >= neighboring_mines {
                         iter_neighbors(coord, self.height, self.width)
                             .unwrap()
                             .filter(|&coord| self.get_cell(coord).unwrap().state != CellState::Open)
