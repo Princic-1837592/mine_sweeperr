@@ -92,8 +92,9 @@ impl MineSweeper for MSMatrix {
     {
         let difficulty @ (height, width, mines) = difficulty.into();
         check!(difficulty, start_from);
-        let mut result = Self::new_unchecked(height, width, mines, start_from);
+        let mut result;
         loop {
+            result = Self::new_unchecked(height, width, mines, start_from);
             result.randomize_mines(mines, start_from, rng);
             if S::solve(result.clone(), start_from).unwrap_or(false) {
                 break;
@@ -142,6 +143,18 @@ impl MineSweeper for MSMatrix {
         ))
     }
 
+    fn open_one(&mut self, coord @ (r, c): Coordinate) -> Result<CellContent> {
+        self.check_coordinate(coord)?;
+        if self.cells[r][c].state == CellState::Closed {
+            self.cells[r][c].state = CellState::Open;
+            self.opened += 1;
+            if self.cells[r][c].content == CellContent::Mine {
+                self.exploded += 1;
+            }
+        }
+        Ok(self.cells[r][c].content)
+    }
+
     fn toggle_flag(&mut self, coord @ (r, c): Coordinate) -> Result<CellState> {
         self.check_coordinate(coord)?;
         match self.cells[r][c].state {
@@ -181,13 +194,6 @@ impl MineSweeper for MSMatrix {
     }
 
     fn get_game_state(&self) -> GameState {
-        // println!(
-        //     "--------------{} {} {} {}",
-        //     self.exploded,
-        //     self.mines,
-        //     self.flagged,
-        //     self.mines - self.flagged - self.exploded
-        // );
         GameState {
             opened: self.opened,
             flagged: self.flagged,

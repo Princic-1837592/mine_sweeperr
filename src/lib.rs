@@ -328,6 +328,8 @@ pub trait MineSweeper: Sized {
     /// - the opening procedure should not stop at the first mine found,
     /// but should keep opening until all safe neighboring cells are opened
     fn open(&mut self, coord: Coordinate) -> Result<OpenResult>;
+    /// todo
+    fn open_one(&mut self, coord: Coordinate) -> Result<CellContent>;
     /// Tries to toggle the flag on a cell.
     ///
     /// - Returns [`OutOfBounds`](Error::OutOfBounds) if the given coordinate is out of bounds

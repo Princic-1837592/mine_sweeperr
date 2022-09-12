@@ -11,43 +11,40 @@ use std::fmt::Display;
 pub struct SPSolver {}
 
 impl SPSolver {
-    fn apply(ms: &mut (impl MineSweeper + Display), (r, c): Coordinate) {
-        let mut queue = VecDeque::from([(r, c)]);
+    fn apply(ms: &mut (impl MineSweeper + Display), coord: Coordinate) -> Result<()> {
+        let mut queue = VecDeque::from([coord]);
         let mut cell;
-        let mut open_result;
+        let mut opened;
         let mut neighboring_flags;
         let mut neighboring_closed;
         let mut add_second_level_neighbors;
         while !queue.is_empty() {
             add_second_level_neighbors = false;
             cell = queue.pop_front().unwrap();
-            open_result = ms.open(cell).unwrap();
-            // println!("Opened {:?}", open_result);
-            println!("{:.0}", ms);
-            if open_result.mines_exploded > 0 {
+            opened = ms.open_one(cell).unwrap();
+            if opened == CellContent::Mine {
                 break;
             }
-            match open_result.cell.content {
-                CellContent::Number(neighbouring_mines) => {
+            match opened {
+                CellContent::Number(cell_number) => {
                     neighboring_closed = get_neighboring_closed(ms, cell);
                     neighboring_flags = count_neighboring_flags(ms, cell);
-                    if neighbouring_mines == neighboring_flags {
+                    if cell_number == neighboring_flags {
                         queue.extend(neighboring_closed.clone());
                         add_second_level_neighbors = true;
-                    } else if neighboring_closed.len()
-                        == (neighbouring_mines - neighboring_flags) as usize
+                    } else if neighboring_closed.len() == (cell_number - neighboring_flags) as usize
                     {
+                        for &c in &neighboring_closed {
+                            ms.toggle_flag(c)?;
+                        }
                         add_second_level_neighbors = true;
-                        neighboring_closed.iter().for_each(|&c| {
-                            ms.toggle_flag(c).ok();
-                        });
                     }
                     if add_second_level_neighbors {
                         queue.extend(
                             neighboring_closed
                                 .iter()
                                 .flat_map(|&c| iter_neighbors(c, ms.height(), ms.width()).unwrap())
-                                /*.filter(|&c| ms.get_cell(c).unwrap().state == CellState::Open)*/,
+                                .filter(|&c| ms.get_cell(c).unwrap().state == CellState::Open),
                         );
                     }
                 }
@@ -57,6 +54,7 @@ impl SPSolver {
                 ),
             }
         }
+        Ok(())
     }
 
     fn unknowns_near(ms: &impl MineSweeper, (r, c): Coordinate) {
@@ -82,10 +80,8 @@ impl<M: MineSweeper + Display> Solver<M> for SPSolver {
     }
 
     fn solve(mut ms: M, start_from: Coordinate) -> Result<bool> {
-        // if ms.open(start_from)?.mines_exploded > 0 {
-        //     return Ok(false);
-        // }
-        SPSolver::apply(&mut ms, start_from);
+        // println!("Applying SPSolver on {:?}", start_from);
+        SPSolver::apply(&mut ms, start_from)?;
         Ok(ms.get_game_state().opened == ms.width() * ms.height() - ms.mines())
     }
 }

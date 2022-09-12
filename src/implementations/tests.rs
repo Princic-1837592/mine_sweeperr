@@ -45,7 +45,7 @@ fn play() {
 
     for seed in 0..1 {
         test::<MSMatrix>(seed);
-        // test::<MSHash>(seed);
+        test::<MSHash>(seed);
     }
 }
 
@@ -275,5 +275,29 @@ fn game_state() {
     for seed in 0..10 {
         test::<MSMatrix>(seed);
         test::<MSHash>(seed);
+    }
+}
+
+#[test]
+#[ignore]
+// #[allow(unused_variables)]
+// #[allow(unused_assignments)]
+fn open_close() {
+    fn test<T: MineSweeper + Display>(_seed: u64) {
+        // let mut rng = StdRng::seed_from_u64(seed);
+        let mut rng = thread_rng();
+
+        let difficulty = Difficulty::easy();
+        let (h, w, m) = difficulty.into();
+        let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
+        let mut ms = T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng).unwrap();
+
+        let mut open_result = ms.open(start_from);
+        open_result = ms.open(start_from);
+    }
+
+    for seed in 0..1 {
+        test::<MSMatrix>(seed);
+        // test::<MSHash>(seed);
     }
 }

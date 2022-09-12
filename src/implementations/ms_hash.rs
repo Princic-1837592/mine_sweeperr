@@ -127,6 +127,18 @@ impl MineSweeper for MSHash {
         ))
     }
 
+    fn open_one(&mut self, coord: Coordinate) -> Result<CellContent> {
+        self.check_coordinate(coord)?;
+        let cell = self.get_cell(coord).unwrap();
+        if cell.state == CellState::Closed {
+            self.open.insert(coord);
+            if cell.content == CellContent::Mine {
+                self.exploded += 1;
+            }
+        }
+        Ok(cell.content)
+    }
+
     fn toggle_flag(&mut self, coord: Coordinate) -> Result<CellState> {
         self.check_coordinate(coord)?;
         if self.open.contains(&coord) {
