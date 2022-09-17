@@ -1,10 +1,12 @@
+use std::collections::VecDeque;
+use std::fmt::{Display, Formatter};
+
+use rand::Rng;
+
 use crate::{
     check, count_neighboring_flags, iter_neighbors, solver::Solver, Cell, CellContent, CellState,
     Coordinate, Difficulty, Error, GameState, MineSweeper, OpenResult, Result,
 };
-use rand::Rng;
-use std::collections::VecDeque;
-use std::fmt::{Display, Formatter};
 
 /// Represents the grid using a matrix of [`cells`](Cell).
 /// Use this when you want to load the whole grid in memory at the beginning.
@@ -123,7 +125,9 @@ impl MineSweeper for MSMatrix {
                     }
                 }
                 if let CellContent::Number(neighboring_mines) = self.cells[r][c].content {
-                    if count_neighboring_flags(self, coord) >= neighboring_mines {
+                    if neighboring_mines == 0
+                        || count_neighboring_flags(self, coord) >= neighboring_mines
+                    {
                         queue.extend(
                             iter_neighbors((r, c), self.height, self.width)
                                 .unwrap()
@@ -205,5 +209,22 @@ impl MineSweeper for MSMatrix {
 impl Display for MSMatrix {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         MineSweeper::fmt(self, f)
+    }
+}
+
+impl From<(usize, usize, &[usize])> for MSMatrix {
+    fn from((height, width, mines): (usize, usize, &[usize])) -> Self {
+        let mut result = Self::new_unchecked(height, width, mines.len(), (0, 0));
+        for coord @ (r, c) in mines.iter().map(|&i| (i / width, i % width)) {
+            result.cells[r][c].content = CellContent::Mine;
+            result.increment_neighbors(coord);
+        }
+        // for row in result.cells.iter() {
+        //     for cell in row.iter() {
+        //         print!("{:?} ", cell.content);
+        //     }
+        //     println!();
+        // }
+        result
     }
 }

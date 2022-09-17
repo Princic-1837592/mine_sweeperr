@@ -31,19 +31,26 @@
 //! is available on [my GitHub page](https://Princic-1837592.github.io)
 
 #![allow(unused)]
+
+use std::fmt::{Display, Formatter};
+
+use rand::Rng;
+
+pub use cell::*;
+pub use difficulty::*;
+pub use implementations::*;
+use solver::Solver;
+pub use utils::*;
+
 mod implementations;
 mod macros;
 pub mod solver;
 mod utils;
 
+mod cell;
+mod difficulty;
 #[cfg(test)]
 mod tests;
-
-pub use implementations::*;
-use rand::Rng;
-use solver::Solver;
-use std::fmt::{Display, Formatter};
-pub use utils::*;
 
 /// A pair of zero-based coordinates. The first coordinate is the row, the second is the column.
 pub type Coordinate = (usize, usize);
@@ -100,187 +107,6 @@ pub struct GameState {
     /// This is simply the number of mines minus the number of flagged cells.
     /// This takes into consideration flags regardless of whether they are correct or not.
     pub mines_left: usize,
-}
-
-/// The state of a [`cell`](Cell).
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub enum CellState {
-    Closed,
-    Open,
-    Flagged,
-}
-
-/// The content of a [`cell`](Cell).
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub enum CellContent {
-    Mine,
-    Number(u8),
-}
-
-/// A cell with its [`state`](CellState) and [`content`](CellContent).
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub struct Cell {
-    pub state: CellState,
-    pub content: CellContent,
-}
-
-impl Cell {
-    /// Creates a new cell with the given state and content.
-    pub fn new(state: CellState, content: CellContent) -> Self {
-        Cell { state, content }
-    }
-    /// Creates a new cell with state [`closed`](CellState::Closed) and content [`0`](CellContent::Number).
-    pub fn closed() -> Self {
-        Self::new(CellState::Closed, CellContent::Number(0))
-    }
-    /// Creates a new cell with state [`open`](CellState::Open) and content [`0`](CellContent::Number).
-    pub fn open() -> Self {
-        Self::new(CellState::Open, CellContent::Number(0))
-    }
-}
-
-impl Default for Cell {
-    /// Creates a [`closed`](Cell::closed) cell.
-    fn default() -> Self {
-        Cell::closed()
-    }
-}
-
-impl Display for Cell {
-    /// Prints a cell in a human-readable way.
-    ///
-    /// If no formatting option is given, the following chars are used:
-    /// - `C` for closed cells
-    /// - `M` for mine cells
-    /// - `F` for flagged cells
-    /// - ` ` (blank space) for cells with a 0
-    /// - `1` to `9` for cells with a number
-    ///
-    /// If `#` is given as formatting option, the following chars are used:
-    /// - `🟪` for closed cells
-    /// - `🟥` for mine cells
-    /// - `🟨` for flagged cells
-    /// - `🟩` for cells with a 0
-    /// - `1️⃣` to `9️⃣` for cells with a number
-    ///
-    /// Other options are ignored.
-    ///
-    /// <span style="color:red">**IMPORTANT**</span>:
-    /// Emojis used in this function are chosen because they have the same width on my machine,
-    /// making the grid aligned on columns.
-    /// I know that this may not be the same for everyone so i suggest you try and implement
-    /// your own formatting function to use the set of characters you think is best for you.
-    /// When using monospace fonts, the non-emoji chars are perfectly aligned on columns
-    /// but of course they are not the best way to print the grid.
-    // some options are: 🟩 🟨 🟦 🟫 🟧 🟪 🟥
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        if f.alternate() {
-            match self.state {
-                CellState::Closed => write!(f, "🟪"),
-                CellState::Open => match self.content {
-                    CellContent::Mine => write!(f, "🟥"),
-                    CellContent::Number(n) => write!(
-                        f,
-                        "{}",
-                        if n > 0 {
-                            NUMBERS[n as usize]
-                        } else {
-                            NUMBERS[10]
-                        }
-                    ),
-                },
-                CellState::Flagged => write!(f, "🟨"),
-            }
-        } else {
-            match self.state {
-                CellState::Closed => write!(f, "C"),
-                CellState::Open => match self.content {
-                    CellContent::Mine => write!(f, "M"),
-                    CellContent::Number(n) => {
-                        if n > 0 {
-                            write!(f, "{}", n)
-                        } else {
-                            write!(f, " ")
-                        }
-                    }
-                },
-                CellState::Flagged => write!(f, "F"),
-            }
-        }
-    }
-}
-
-/// TODO Represents the difficulty of a game in terms of height, width and number of mines.
-///
-/// When calling [`MineSweeper::new`](MineSweeper::new) or [`MineSweeper::from_rng`](MineSweeper::from_rng)
-/// you can either pass a default difficulty or a custom one.
-///
-/// The default difficulties are:
-/// - `Easy`: `9x9` grid with `10` mines
-/// - `Medium`: `16x16` grid with `40` mines
-/// - `Hard`: `16x30` grid with `99` mines
-///
-/// Difficulty can be derived from a tuple representing `(height, width, mines)`
-/// or from a tuple representing `(height, width, density)`.
-/// For example:
-/// ```
-/// # use mine_sweeperr::Difficulty;
-/// let difficulty: Difficulty = (10, 10, 0.1).into();
-/// ```
-/// will produce a difficulty with `10x10` grid and `10` mines.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Difficulty {
-    height: usize,
-    width: usize,
-    mines: usize,
-}
-
-impl Difficulty {
-    const fn new(height: usize, width: usize, mines: usize) -> Self {
-        Difficulty {
-            height,
-            width,
-            mines,
-        }
-    }
-
-    pub const fn easy() -> Self {
-        Self::new(9, 9, 10)
-    }
-
-    pub const fn medium() -> Self {
-        Self::new(16, 16, 40)
-    }
-
-    pub const fn hard() -> Self {
-        Self::new(16, 30, 99)
-    }
-
-    pub const fn custom(height: usize, width: usize, mines: usize) -> Self {
-        Self::new(height, width, mines)
-    }
-
-    pub fn from_density(height: usize, width: usize, density: f32) -> Self {
-        Self::new(height, width, ((height * width) as f32 * density) as usize)
-    }
-}
-
-impl From<Difficulty> for (usize, usize, usize) {
-    fn from(difficulty: Difficulty) -> (usize, usize, usize) {
-        (difficulty.height, difficulty.width, difficulty.mines)
-    }
-}
-
-impl From<(usize, usize, usize)> for Difficulty {
-    fn from((height, width, mines): (usize, usize, usize)) -> Difficulty {
-        Difficulty::custom(height, width, mines)
-    }
-}
-
-impl From<(usize, usize, f32)> for Difficulty {
-    fn from((height, width, density): (usize, usize, f32)) -> Difficulty {
-        Difficulty::from_density(height, width, density)
-    }
 }
 
 /// Represents a board with its cells.
@@ -379,6 +205,6 @@ pub trait MineSweeper: Sized {
         }
         Ok(())
     }
-    // todo
-    // fn from_triple(height:usize, width:usize, mines:Vec<Coordinate>) -> Self;
+    // // todo
+    // fn from_triple(height: usize, width: usize, mines: Vec<Coordinate>) -> Self;
 }

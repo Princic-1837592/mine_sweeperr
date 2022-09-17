@@ -75,12 +75,7 @@ impl SPSolver {
 }
 
 impl<M: MineSweeper + Display> Solver<M> for SPSolver {
-    fn new() -> Self {
-        todo!()
-    }
-
     fn solve(mut ms: M, start_from: Coordinate) -> Result<bool> {
-        // println!("Applying SPSolver on {:?}", start_from);
         SPSolver::apply(&mut ms, start_from)?;
         Ok(ms.get_game_state().opened == ms.width() * ms.height() - ms.mines())
     }

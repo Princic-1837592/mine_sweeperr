@@ -1,5 +1,6 @@
-use crate::{CellContent, CellState, Coordinate, Error::OutOfBounds, MineSweeper, Result};
 use std::fmt::Write;
+
+use crate::{CellState, Coordinate, Error::OutOfBounds, MineSweeper, Result};
 
 /// Contains emoji numbers from 0 to 9. position 10 is the emoji to represent a 0-cell.
 pub(crate) const NUMBERS: [&str; 11] = ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🟩"];
@@ -121,8 +122,9 @@ pub(crate) fn get_row_number(number: usize, width: usize, use_emojis: bool) -> S
 
 #[cfg(test)]
 mod tests {
-    use crate::{get_column_numbers, iter_neighbors};
     use std::collections::HashSet;
+
+    use crate::{get_column_numbers, iter_neighbors};
 
     #[test]
     fn neighbors() {

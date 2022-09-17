@@ -1,15 +1,18 @@
-use crate::{
-    iter_neighbors, solver::NonDeterministic, CellContent, Difficulty, Error, GameState, MSHash,
-    MSMatrix, MineSweeper,
-};
-use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use std::fmt::{Debug, Display};
+
+use rand::{Rng, rngs::StdRng, SeedableRng, thread_rng};
+
+use crate::{
+    CellContent, Difficulty, Error, GameState, iter_neighbors, MineSweeper, MSHash,
+    MSMatrix, solver::NonDeterministic,
+};
+
 
 #[test]
 // #[allow(unused_variables)]
 // #[allow(unused_assignments)]
 fn play() {
-    fn test<T: MineSweeper + Display>(_seed: u64) {
+    fn test<T: MineSweeper + Display>(seed: u64) {
         // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
@@ -51,11 +54,11 @@ fn play() {
 
 #[test]
 fn invalid_number_of_mines() {
-    fn test<T: MineSweeper>(_seed: u64) {
-        // let mut rng = StdRng::seed_from_u64(_seed);
+    fn test<T: MineSweeper>(seed: u64) {
+        // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
-        let (h, w) = (rng.gen_range(1..100), rng.gen_range(1..100));
+        let (h, w) = (rng.gen_range(4..100), rng.gen_range(4..100));
         let mut m = w * h;
         let mut difficulty = Difficulty::custom(h, w, m);
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
@@ -91,8 +94,8 @@ fn invalid_number_of_mines() {
 
 #[test]
 fn start_from() {
-    fn test<T: MineSweeper>(_seed: u64) {
-        // let mut rng = StdRng::seed_from_u64(_seed);
+    fn test<T: MineSweeper>(seed: u64) {
+        // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
         let difficulty = Difficulty::hard();
@@ -124,8 +127,8 @@ fn start_from() {
 
 #[test]
 fn invalid_start_from() {
-    fn test<T: MineSweeper>(_seed: u64) {
-        // let mut rng = StdRng::seed_from_u64(_seed);
+    fn test<T: MineSweeper>(seed: u64) {
+        // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
         let difficulty = Difficulty::hard();
@@ -154,12 +157,12 @@ fn invalid_start_from() {
 // #[allow(unused_variables)]
 // #[allow(unused_assignments)]
 fn compare_implementations() {
-    fn test<T, E>(_seed: u64)
+    fn test<T, E>(seed: u64)
     where
         T: MineSweeper + Display,
         E: MineSweeper + Display,
     {
-        let mut rng = StdRng::seed_from_u64(_seed);
+        let mut rng = StdRng::seed_from_u64(seed);
         // let mut rng = thread_rng();
 
         let difficulty = Difficulty::hard();
@@ -206,7 +209,7 @@ fn compare_implementations() {
 
 #[test]
 fn game_state() {
-    fn test<T>(_seed: u64)
+    fn test<T>(seed: u64)
     where
         T: MineSweeper + Display + Debug,
     {
@@ -275,29 +278,5 @@ fn game_state() {
     for seed in 0..10 {
         test::<MSMatrix>(seed);
         test::<MSHash>(seed);
-    }
-}
-
-#[test]
-#[ignore]
-// #[allow(unused_variables)]
-// #[allow(unused_assignments)]
-fn open_close() {
-    fn test<T: MineSweeper + Display>(_seed: u64) {
-        // let mut rng = StdRng::seed_from_u64(seed);
-        let mut rng = thread_rng();
-
-        let difficulty = Difficulty::easy();
-        let (h, w, m) = difficulty.into();
-        let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-        let mut ms = T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng).unwrap();
-
-        let mut open_result = ms.open(start_from);
-        open_result = ms.open(start_from);
-    }
-
-    for seed in 0..1 {
-        test::<MSMatrix>(seed);
-        // test::<MSHash>(seed);
     }
 }
