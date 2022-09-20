@@ -1,10 +1,12 @@
+use std::collections::{HashSet, VecDeque};
+use std::fmt::{Display, Formatter};
+
+use rand::Rng;
+
 use crate::{
     check, count_neighboring_flags, iter_neighbors, solver::Solver, Cell, CellContent, CellState,
     Coordinate, Difficulty, Error, GameState, MineSweeper, OpenResult, Result,
 };
-use rand::Rng;
-use std::collections::{HashSet, VecDeque};
-use std::fmt::{Display, Formatter};
 
 /// Represents a grid using [`HashSets`](HashSet) of [`Coordinates`](Coordinate).
 /// Use this when you don't want to load the whole grid in memory at the beginning.
@@ -65,21 +67,21 @@ impl MSHash {
             .count() as u8
     }
 
-    /// Counts the number of flags around a cell to propagate the opening procedure.
-    fn count_neighboring_flags(&self, coord: Coordinate) -> u8 {
-        iter_neighbors(coord, self.height, self.width)
-            .unwrap()
-            .filter(|coord| self.flagged.contains(coord))
-            .count() as u8
-    }
+    // /// Counts the number of flags around a cell to propagate the opening procedure.
+    // fn count_neighboring_flags(&self, coord: Coordinate) -> u8 {
+    //     iter_neighbors(coord, self.height, self.width)
+    //         .unwrap()
+    //         .filter(|coord| self.flagged.contains(coord))
+    //         .count() as u8
+    // }
 }
 
 impl MineSweeper for MSHash {
-    fn from_rng<S, R>(difficulty: Difficulty, start_from: Coordinate, rng: &mut R) -> Result<Self>
-    where
-        S: Solver<Self>,
-        R: Rng,
-    {
+    fn from_rng<S: Solver>(
+        difficulty: Difficulty,
+        start_from: Coordinate,
+        rng: &mut impl Rng,
+    ) -> Result<Self> {
         let difficulty @ (height, width, mines) = difficulty.into();
         check!(difficulty, start_from);
         let mut result = Self::new_unchecked(height, width, mines, start_from);

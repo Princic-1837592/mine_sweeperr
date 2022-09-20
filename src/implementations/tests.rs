@@ -1,25 +1,24 @@
 use std::fmt::{Debug, Display};
 
-use rand::{Rng, rngs::StdRng, SeedableRng, thread_rng};
+use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 
 use crate::{
-    CellContent, Difficulty, Error, GameState, iter_neighbors, MineSweeper, MSHash,
-    MSMatrix, solver::NonDeterministic,
+    iter_neighbors, solver::NonDeterministic, CellContent, Difficulty, Error, GameState, MSHash,
+    MSMatrix, MineSweeper,
 };
-
 
 #[test]
 // #[allow(unused_variables)]
 // #[allow(unused_assignments)]
 fn play() {
-    fn test<T: MineSweeper + Display>(seed: u64) {
+    fn test<T: MineSweeper + Display>(#[allow(unused)] seed: u64) {
         // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
         let difficulty = Difficulty::easy();
         let (h, w, m) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-        let mut ms = T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng).unwrap();
+        let mut ms = T::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng).unwrap();
 
         assert_eq!(ms.height(), h);
         assert_eq!(ms.width(), w);
@@ -54,7 +53,7 @@ fn play() {
 
 #[test]
 fn invalid_number_of_mines() {
-    fn test<T: MineSweeper>(seed: u64) {
+    fn test<T: MineSweeper>(#[allow(unused)] seed: u64) {
         // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
@@ -63,7 +62,7 @@ fn invalid_number_of_mines() {
         let mut difficulty = Difficulty::custom(h, w, m);
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
 
-        match T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng) {
+        match T::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng) {
             Err(Error::TooManyMines) => (),
             Err(_) => {
                 panic!("Wrong error: MineSweeper::new should panic with Error::TooManyMines!")
@@ -73,7 +72,7 @@ fn invalid_number_of_mines() {
 
         m = w * h - 9;
         difficulty = Difficulty::custom(h, w, m);
-        match T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng) {
+        match T::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng) {
             Err(Error::TooManyMines) => (),
             Err(_) => {
                 panic!("Wrong error: MineSweeper::new should panic with Error::TooManyMines!")
@@ -94,7 +93,7 @@ fn invalid_number_of_mines() {
 
 #[test]
 fn start_from() {
-    fn test<T: MineSweeper>(seed: u64) {
+    fn test<T: MineSweeper>(#[allow(unused)] seed: u64) {
         // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
@@ -127,7 +126,7 @@ fn start_from() {
 
 #[test]
 fn invalid_start_from() {
-    fn test<T: MineSweeper>(seed: u64) {
+    fn test<T: MineSweeper>(#[allow(unused)] seed: u64) {
         // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
@@ -135,7 +134,7 @@ fn invalid_start_from() {
         let (h, w, _) = difficulty.into();
         let start_from = (h, w);
 
-        match T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng) {
+        match T::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng) {
             Err(Error::OutOfBounds) => (),
             Err(_) => {
                 panic!("Wrong error: MineSweeper::new should panic with Error::OutOfBounds!")
@@ -166,12 +165,12 @@ fn compare_implementations() {
         // let mut rng = thread_rng();
 
         let difficulty = Difficulty::hard();
-        let (h, w, m) = difficulty.into();
+        let (h, w, _) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
         let mut ms_1 =
-            T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng.clone()).unwrap();
+            T::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng.clone()).unwrap();
         let mut ms_2 =
-            E::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng.clone()).unwrap();
+            E::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng.clone()).unwrap();
 
         assert_eq!(ms_1.to_string(), ms_2.to_string());
 
@@ -209,7 +208,7 @@ fn compare_implementations() {
 
 #[test]
 fn game_state() {
-    fn test<T>(seed: u64)
+    fn test<T>(#[allow(unused)] seed: u64)
     where
         T: MineSweeper + Display + Debug,
     {
@@ -219,7 +218,7 @@ fn game_state() {
         let difficulty = Difficulty::easy();
         let (h, w, m) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-        let mut ms = T::from_rng::<NonDeterministic, _>(difficulty, start_from, &mut rng).unwrap();
+        let mut ms = T::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng).unwrap();
 
         assert_eq!(ms.height(), h);
         assert_eq!(ms.width(), w);

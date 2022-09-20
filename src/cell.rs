@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
-use crate::NUMBERS;
 
+use crate::NUMBERS;
 
 /// The state of a [`cell`](Cell).
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -15,6 +15,16 @@ pub enum CellState {
 pub enum CellContent {
     Mine,
     Number(u8),
+}
+
+impl Display for CellContent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CellContent::Mine => write!(f, "*"),
+            CellContent::Number(n) if *n > 0 => write!(f, "{}", n),
+            CellContent::Number(_) => write!(f, " "),
+        }
+    }
 }
 
 /// A cell with its [`state`](CellState) and [`content`](CellContent).

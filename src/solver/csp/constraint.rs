@@ -1,20 +1,19 @@
-use std::borrow::{Borrow, BorrowMut};
-use std::cell::{Ref, RefCell};
-
-use crate::{Coordinate, MineSweeper};
+use std::borrow::BorrowMut;
+use std::cell::RefCell;
+use std::cmp::Ordering;
+use std::rc::Rc;
 
 use super::board::{Board, BoardCell, MARKED};
 
-pub(crate) struct Constraint<'a> {
-    pub variables: Vec<&'a RefCell<BoardCell>>,
-    // nvariables: u8,
-    pub constant: u8,
-    pub unassigned: u8,
-    pub current_constant: u8,
-    pub next_unassigned: Option<&'a RefCell<BoardCell>>,
+pub(crate) struct Constraint {
+    variables: Vec<Rc<RefCell<BoardCell>>>,
+    pub constant: i32,
+    unassigned: i32,
+    current_constant: i32,
+    next_unassigned: Option<Rc<RefCell<BoardCell>>>,
 }
 
-impl<'a> Constraint<'a> {
+impl Constraint {
     pub fn new() -> Self {
         Constraint {
             variables: Vec::with_capacity(8),
@@ -26,56 +25,58 @@ impl<'a> Constraint<'a> {
         }
     }
 
-    pub fn add_variable(&mut self, cell: &'a RefCell<BoardCell>) {
+    pub fn add_variable(&mut self, cell: Rc<RefCell<BoardCell>>) {
         self.variables.push(cell);
     }
 
-    pub fn set_constant(&mut self, constant: u8) {
+    pub fn get_variables(&self) -> Vec<Rc<RefCell<BoardCell>>> {
+        // self.variables.iter().map(Rc::clone).collect() // dovrebbe essere uguale
+        self.variables.clone()
+    }
+
+    pub fn set_constant(&mut self, constant: i32) {
         self.constant = constant;
     }
 
-    pub fn update_variable(&mut self, cell: &'a RefCell<BoardCell>) {
+    pub fn update_variable(&mut self, _cell: Option<Rc<RefCell<BoardCell>>>) {
         self.current_constant = 0;
         self.unassigned = 0;
         self.next_unassigned = None;
-        for &variable in &self.variables {
-            if variable.borrow().test_assignment < 0 {
-                self.next_unassigned = Some(variable);
+        for variable in &self.variables {
+            if <RefCell<_>>::borrow(variable).test_assignment < 0 {
+                self.next_unassigned = Some(Rc::clone(variable));
                 self.unassigned += 1;
-            } else if variable.borrow().test_assignment >= 1 {
+            } else if <RefCell<_>>::borrow(variable).test_assignment >= 1 {
                 self.current_constant += 1;
             }
         }
     }
 
     pub fn is_satisfied(&self) -> bool {
-        self.unassigned > 0 || self.current_constant == self.constant
+        self.current_constant <= self.constant
+            && (self.unassigned > 0 || self.current_constant == self.constant)
     }
 
-    pub fn suggest_unassigned_variable(&self) -> Option<&'a RefCell<BoardCell>> {
-        match self.next_unassigned {
-            None => None,
-            Some(next) => {
-                if self.current_constant == self.constant {
-                    next.borrow_mut().test_assignment = 0;
-                    Some(next)
-                } else if self.constant - self.current_constant == self.unassigned {
-                    next.borrow_mut().test_assignment = 1;
-                    Some(next)
-                } else {
-                    None
-                }
-            }
+    pub fn suggest_unassigned_variable(&self) -> Option<Rc<RefCell<BoardCell>>> {
+        self.next_unassigned.as_ref()?;
+        if self.current_constant == self.constant {
+            <RefCell<_>>::borrow_mut(self.next_unassigned.as_ref().unwrap()).test_assignment = 0;
+            return Some(Rc::clone(self.next_unassigned.as_ref().unwrap()));
         }
+        if self.constant - self.current_constant == self.unassigned {
+            <RefCell<_>>::borrow_mut(self.next_unassigned.as_ref().unwrap()).test_assignment = 1;
+            return Some(Rc::clone(self.next_unassigned.as_ref().unwrap()));
+        }
+        None
     }
 
     pub fn update_and_remove_known_variables(
-        &'a mut self,
-        board: RefCell<Board<'a>>,
-    ) -> Option<Vec<Constraint>> {
+        &mut self,
+        board: &mut Board,
+    ) -> Option<Vec<Rc<RefCell<Constraint>>>> {
         let mut state;
         for i in (0..self.variables.len()).rev() {
-            state = self.variables[i].borrow().state;
+            state = <RefCell<_>>::borrow(&self.variables[i]).state;
             if state >= 0 {
                 self.variables.swap_remove(i);
             } else if state == MARKED {
@@ -83,23 +84,24 @@ impl<'a> Constraint<'a> {
                 self.constant -= 1;
             }
         }
-        let mut result: Vec<Constraint>;
-        if self.variables.is_empty() {
+        let mut result;
+        if self.is_empty() {
             return None;
         }
         if self.constant == 0 {
             result = Vec::with_capacity(self.variables.len());
-            for &variable in &self.variables {
-                let coord = variable.borrow().coordinate;
-                board.borrow_mut().open(coord);
-                if let Some(c) = board.borrow().new_constraint(coord) {
+            for variable in &self.variables {
+                let coord = <RefCell<_>>::borrow(variable).coordinate;
+                board.open(coord);
+                if let Some(c) = board.new_constraint(coord) {
                     result.push(c);
                 }
             }
-        } else if self.constant == self.variables.len() as u8 {
+        } else if self.constant == self.variables.len() as i32 {
             result = Vec::with_capacity(0);
-            for &variable in &self.variables {
-                board.borrow_mut().flag(variable.borrow().coordinate);
+            for variable in &self.variables {
+                let coord = <RefCell<_>>::borrow(variable).coordinate;
+                board.borrow_mut().flag(coord);
             }
         } else {
             return None;
@@ -110,39 +112,100 @@ impl<'a> Constraint<'a> {
         Some(result)
     }
 
-    pub fn simplify(&mut self, other: &mut Constraint) -> bool {
-        if self.variables.len() < other.variables.len() {
-            return other.simplify(self);
+    pub fn simplify(mut this: Rc<RefCell<Constraint>>, mut other: Rc<RefCell<Constraint>>) -> bool {
+        if this.borrow().variables.len() < other.borrow().variables.len() {
+            return Constraint::simplify(other, this);
         }
-        for i in 0..other.variables.len() {
-            for j in 0..self.variables.len() {
-                if self.variables[j] == other.variables[i] {
+        for i in 0..other.borrow().variables.len() {
+            for j in 0..this.borrow().variables.len() {
+                if this.borrow().variables[j] == other.borrow().variables[i] {
                     break;
-                } else if j >= self.variables.len() - 1 {
+                } else if j >= this.borrow().variables.len() - 1 {
                     return false;
                 }
             }
         }
-        for i in 0..other.variables.len() {
-            for j in 0..self.variables.len() {
-                if self.variables[j] == other.variables[i] {
-                    self.variables.swap_remove(j);
+        let (o_len, t_len) = (
+            other.borrow().variables.len(),
+            this.borrow().variables.len(),
+        );
+        for i in 0..o_len {
+            for j in 0..t_len {
+                if this.borrow().variables[j] == other.borrow().variables[i] {
+                    <RefCell<_>>::borrow_mut(&this).variables.swap_remove(j);
                     break;
                 }
             }
         }
-        self.constant -= other.constant;
+        <RefCell<_>>::borrow_mut(&this).constant -= other.borrow().constant;
         true
     }
 
-    pub fn coupled_with(&mut self, other: &mut Constraint) -> bool {
-        for i in 0..other.variables.len() {
+    pub fn coupled_with(&mut self, other: Rc<RefCell<Constraint>>) -> bool {
+        for i in 0..other.borrow().variables.len() {
             for j in 0..self.variables.len() {
-                if self.variables[j] == other.variables[i] {
+                if self.variables[j] == other.borrow().variables[i] {
                     return true;
                 }
             }
         }
         false
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.variables.is_empty()
+    }
+}
+
+pub(crate) struct ConstraintList {
+    pub variable: Rc<RefCell<BoardCell>>,
+    pub constraints: Vec<Rc<RefCell<Constraint>>>,
+}
+
+impl ConstraintList {
+    pub fn new(constraint: Rc<RefCell<Constraint>>, variable: Rc<RefCell<BoardCell>>) -> Self {
+        ConstraintList {
+            variable,
+            constraints: vec![constraint],
+        }
+    }
+
+    pub fn add_constraint(&mut self, constraint: Rc<RefCell<Constraint>>) {
+        self.constraints.push(constraint);
+    }
+
+    pub fn update_constraints(&self) {
+        for constraint in &self.constraints {
+            <RefCell<_>>::borrow_mut(constraint).update_variable(Some(Rc::clone(&self.variable)));
+        }
+    }
+
+    pub fn check_constraints(&self) -> bool {
+        self.constraints.iter().all(|c| c.borrow().is_satisfied())
+    }
+}
+
+impl PartialEq for ConstraintList {
+    fn eq(&self, other: &Self) -> bool {
+        self.constraints.len() == other.constraints.len()
+    }
+}
+
+impl PartialOrd for ConstraintList {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(
+            self.constraints
+                .len()
+                .cmp(&other.constraints.len())
+                .reverse(),
+        )
+    }
+}
+
+impl Eq for ConstraintList {}
+
+impl Ord for ConstraintList {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }

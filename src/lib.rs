@@ -30,7 +30,7 @@
 //! A [working implementation](https://princic-1837592.github.io/mine_sweeper/index.html) of this library with wasm frontend
 //! is available on [my GitHub page](https://Princic-1837592.github.io)
 
-#![allow(unused)]
+// #![allow(unused)]
 
 use std::fmt::{Display, Formatter};
 
@@ -128,19 +128,17 @@ pub trait MineSweeper: Sized {
     /// - Returns [`OutOfBounds`](Error::OutOfBounds) if the starting point is out of bounds.
     ///
     /// If not overridden, the default rng used is [`rand::thread_rng()`](rand::thread_rng()).
-    fn new<S>(difficulty: Difficulty, start_from: Coordinate) -> Result<Self>
-    where
-        S: Solver<Self>,
-    {
-        Self::from_rng::<S, _>(difficulty, start_from, &mut rand::thread_rng())
+    fn new<S: Solver>(difficulty: Difficulty, start_from: Coordinate) -> Result<Self> {
+        Self::from_rng::<S>(difficulty, start_from, &mut rand::thread_rng())
     }
     /// Creates a new instance of the game using the given random generator.
     /// Can be used to test the game or to reproduce a specific game by passing a seeded rng.
     /// Read more about constraints in a newly created game [here](MineSweeper::new).
-    fn from_rng<S, R>(difficulty: Difficulty, start_from: Coordinate, rng: &mut R) -> Result<Self>
-    where
-        S: Solver<Self>,
-        R: Rng;
+    fn from_rng<S: Solver>(
+        difficulty: Difficulty,
+        start_from: Coordinate,
+        rng: &mut impl Rng,
+    ) -> Result<Self>;
     /// Tries to open a cell.
     ///
     /// Returns an error if the cell is out of bounds,

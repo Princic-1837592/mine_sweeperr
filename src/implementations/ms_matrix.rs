@@ -77,30 +77,31 @@ impl MSMatrix {
         }
     }
 
-    /// Counts the number of flags around a cell to propagate the opening procedure.
-    fn count_neighboring_flags(&self, coord: Coordinate) -> u8 {
-        iter_neighbors(coord, self.height, self.width)
-            .unwrap()
-            .filter(|(r, c)| self.cells[*r][*c].state == CellState::Flagged)
-            .count() as u8
-    }
+    // /// Counts the number of flags around a cell to propagate the opening procedure.
+    // fn count_neighboring_flags(&self, coord: Coordinate) -> u8 {
+    //     iter_neighbors(coord, self.height, self.width)
+    //         .unwrap()
+    //         .filter(|(r, c)| self.cells[*r][*c].state == CellState::Flagged)
+    //         .count() as u8
+    // }
 }
 
 impl MineSweeper for MSMatrix {
-    fn from_rng<S, R>(difficulty: Difficulty, start_from: Coordinate, rng: &mut R) -> Result<Self>
-    where
-        S: Solver<Self>,
-        R: Rng,
-    {
+    fn from_rng<S: Solver>(
+        difficulty: Difficulty,
+        start_from: Coordinate,
+        rng: &mut impl Rng,
+    ) -> Result<Self> {
         let difficulty @ (height, width, mines) = difficulty.into();
         check!(difficulty, start_from);
         let mut result;
         loop {
             result = Self::new_unchecked(height, width, mines, start_from);
             result.randomize_mines(mines, start_from, rng);
-            if S::solve(result.clone(), start_from).unwrap_or(false) {
+            if S::solve(&result, start_from).unwrap_or(false) {
                 break;
             }
+            // println!("Failed to generate a valid board, retrying...");
         }
         Ok(result)
     }
@@ -212,13 +213,14 @@ impl Display for MSMatrix {
     }
 }
 
-impl From<(usize, usize, &[usize])> for MSMatrix {
-    fn from((height, width, mines): (usize, usize, &[usize])) -> Self {
+impl From<(usize, usize, &[usize], (usize, usize))> for MSMatrix {
+    fn from((height, width, mines, start_from): (usize, usize, &[usize], (usize, usize))) -> Self {
         let mut result = Self::new_unchecked(height, width, mines.len(), (0, 0));
         for coord @ (r, c) in mines.iter().map(|&i| (i / width, i % width)) {
             result.cells[r][c].content = CellContent::Mine;
             result.increment_neighbors(coord);
         }
+        result.start_from = start_from;
         // for row in result.cells.iter() {
         //     for cell in row.iter() {
         //         print!("{:?} ", cell.content);
@@ -226,5 +228,19 @@ impl From<(usize, usize, &[usize])> for MSMatrix {
         //     println!();
         // }
         result
+    }
+}
+
+impl From<MSMatrix> for (usize, usize, Vec<usize>, (usize, usize)) {
+    fn from<'a>(ms: MSMatrix) -> Self {
+        let mut mines = Vec::with_capacity(ms.mines);
+        for r in 0..ms.height {
+            for c in 0..ms.width {
+                if ms.cells[r][c].content == CellContent::Mine {
+                    mines.push(r * ms.width + c);
+                }
+            }
+        }
+        (ms.height, ms.width, mines, ms.start_from)
     }
 }
