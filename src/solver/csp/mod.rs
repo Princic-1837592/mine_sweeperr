@@ -1,4 +1,3 @@
-use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -6,7 +5,7 @@ use board::Board;
 use constraint::Constraint;
 
 use crate::solver::csp::board::MINE;
-use crate::{CellContent, Coordinate, MineSweeper, Result};
+use crate::{Coordinate, MineSweeper};
 
 use super::{csp::solution_set::SolutionSet, Solver};
 
@@ -22,20 +21,10 @@ pub struct CSPSolver {
 }
 
 impl CSPSolver {
-    fn new(ms: &impl MineSweeper) -> Self {
-        let board = Board::new(ms);
-        CSPSolver {
-            constraints: Vec::with_capacity(ms.width() * ms.height()),
-            board,
-        }
-    }
-
-    fn solve(&mut self, start_from: Coordinate) -> Result<bool> {
+    fn solve(&mut self, start_from: Coordinate) -> bool {
         if self.board.open(start_from) == MINE {
-            return Ok(false);
+            return false;
         }
-        // // should be useless to check for constraints in all the board
-        // // if we assume the board was all closed at the beginning
         for i in 0..self.board.cells.len() {
             for j in 0..self.board.cells[i].len() {
                 if let Some(constraint) = self.board.new_constraint((i, j)) {
@@ -43,12 +32,6 @@ impl CSPSolver {
                 }
             }
         }
-        // should be ok to only check for the one opened cell
-        // self.constraints.push(
-        //     self.board
-        //         .new_constraint(start_from)
-        //         .expect("At this point there should be one and only one constraint"),
-        // );
         while !self.board.done() {
             self.simplify_constraints();
             if self.board.done() {
@@ -56,15 +39,15 @@ impl CSPSolver {
             }
             let mut subsets = self.separate_constraints();
             if !subsets.is_empty() {
-                for mut subset in &mut subsets {
+                for subset in &mut subsets {
                     subset.enumerate_solutions();
                 }
             }
             let remaining = self.board.unflagged_mines();
             let far = self.board.unknown;
-            let mut far_max = remaining as i32;
+            let mut far_max = remaining as isize;
             for i in 0..subsets.len() {
-                let (mut min, mut max) = (0, far as i32);
+                let (mut min, mut max) = (0, far as isize);
                 for (j, subset) in subsets.iter().enumerate() {
                     if i != j {
                         min += subset.get_min();
@@ -72,7 +55,7 @@ impl CSPSolver {
                     }
                 }
                 subsets[i].reduce_min_max(remaining - max, remaining - min);
-                far_max -= subsets[i].get_min() as i32;
+                far_max -= subsets[i].get_min() as isize;
             }
             for subset in subsets {
                 subset.mark_mines(&mut self.board);
@@ -89,7 +72,7 @@ impl CSPSolver {
             }
             break;
         }
-        Ok(self.board.done())
+        self.board.done()
     }
 
     fn separate_constraints(&mut self) -> Vec<SolutionSet> {
@@ -130,15 +113,17 @@ impl CSPSolver {
     fn simplify_constraints(&mut self) {
         loop {
             let mut done = true;
+            let mut i = 0;
             loop {
                 let mut to_extend = Vec::new();
-                for constraint in &self.constraints {
-                    if let Some(new_constraints) = <RefCell<_>>::borrow_mut(constraint)
+                while i < self.constraints.len() {
+                    if let Some(new_constraints) = <RefCell<_>>::borrow_mut(&self.constraints[i])
                         .update_and_remove_known_variables(&mut self.board)
                     {
                         done = false;
                         to_extend.extend(new_constraints);
                     }
+                    i += 1;
                 }
                 if to_extend.is_empty() {
                     break;
@@ -174,8 +159,54 @@ impl CSPSolver {
     }
 }
 
-impl Solver for CSPSolver {
-    fn solve<M: MineSweeper>(ms: &M, start_from: Coordinate) -> Result<bool> {
-        Self::new(ms).solve(start_from)
+impl<M: MineSweeper> Solver<M> for CSPSolver {
+    fn new(ms: &M) -> Self {
+        let board = Board::new(ms);
+        CSPSolver {
+            constraints: Vec::with_capacity(ms.width() * ms.height()),
+            board,
+        }
+    }
+
+    fn solve(&mut self, start_from: Coordinate) -> bool {
+        let result = self.solve(start_from);
+        // #[cfg(test)]
+        // {
+        //     // println!(
+        //     //     "{}",
+        //     //     this.constraints
+        //     //         .iter()
+        //     //         .map(|r| r.borrow().to_string())
+        //     //         .collect::<Vec<_>>()
+        //     //         .join("\n")
+        //     // );
+        //     let sets = this.separate_constraints();
+        //     println!(
+        //         "[{}]",
+        //         sets.iter()
+        //             .map(ToString::to_string)
+        //             .collect::<Vec<_>>()
+        //             .join(",\n\n")
+        //     );
+        // }
+        result
+        // if result {
+        //     Ok(())
+        // } else {
+        //     Err(this
+        //         .separate_constraints()
+        //         .iter()
+        //         .map(|set| {
+        //             let mut result: Vec<_> = set
+        //                 .get_variables()
+        //                 .iter()
+        //                 .map(|v| v.borrow().coordinate)
+        //                 .collect();
+        //             result.sort();
+        //             result.dedup();
+        //             result
+        //         })
+        //         .collect())
+        // }
     }
 }

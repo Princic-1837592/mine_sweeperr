@@ -12,25 +12,20 @@
 //!
 //! // Create a new game with a 16x16 board and 40 mines
 //! // setting the starting point at (0, 0)
-//! let mut ms: MSMatrix = MSMatrix::new::<NonDeterministic>(Difficulty::medium(), (0, 0)).unwrap();
+//! let mut ms = MSMatrix::new::<NonDeterministic>(Difficulty::medium(), (0, 0)).unwrap();
 //!
 //! // Reveal the cell at (0, 0)
 //! ms.open((0, 0)).unwrap();
 //! ```
 //! You can also create your own implementation, if you prefer:
-//! this crate already declares the needed functions and types to create and manage a mine sweeper game.
+//! this crate already groups the needed functions and types in a [Trait](MineSweeper)
+//! to create and manage a mine sweeper game.
 //!
-//! Read the [CHANGELOG](https://github.com/Princic-1837592/mine_sweeperr/blob/main/CHANGELOG.md) for information about the latest changes.
+//! Read the [CHANGELOG](https://github.com/Princic-1837592/mine_sweeperr/blob/main/CHANGELOG.md)
+//! for information about the latest changes.
 //!
-//! <span style="color:red">**IMPORTANT**</span>:
-//! This crate supports [wasm](https://crates.io/crates/wasm-bindgen) but, in that case,
-//! seeded random generators (or in general the rand crate) are not allowed
-//! due to incompatibility with wasm itself.
-//! Maybe in future versions some kind of trick will be implemented to make it work.
-//! A [working implementation](https://princic-1837592.github.io/mine_sweeper/index.html) of this library with wasm frontend
-//! is available on [my GitHub page](https://Princic-1837592.github.io)
-
-// #![allow(unused)]
+//! A [working implementation](https://princic-1837592.github.io/mine_sweeper/index.html)
+//! of this library is available on [my GitHub page](https://Princic-1837592.github.io)
 
 use std::fmt::{Display, Formatter};
 
@@ -54,8 +49,8 @@ mod tests;
 
 /// A pair of zero-based coordinates. The first coordinate is the row, the second is the column.
 pub type Coordinate = (usize, usize);
-/// The result of some potentially dangerous action.
-pub type Result<T> = std::result::Result<T, Error>;
+/// The result of some potentially wrong action.
+type Result<T> = std::result::Result<T, Error>;
 
 /// Error type for the [`MineSweeper`](MineSweeper) game.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -70,31 +65,20 @@ pub enum Error {
 ///
 /// Contains information about the content of the opened cell,
 /// how many cells have been opened in total,
-/// how many mines have been found (exploded) during the process,
-/// the number of flags touched while opening.
+/// how many mines have been found (exploded) during the process.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OpenResult {
     pub cell: Cell,
     pub cells_opened: usize,
     pub mines_exploded: usize,
-    /// The number of times that the opening procedure tried to open a cell near to a flagged cell.
-    /// This value may be a lot higher than the number of flagged cells,
-    /// since the same flagged cell may be touched multiple times during the opening process.
-    pub flags_touched: usize,
 }
 
 impl OpenResult {
-    pub(crate) fn new(
-        cell: Cell,
-        cells_opened: usize,
-        mines_exploded: usize,
-        flags_touched: usize,
-    ) -> Self {
+    pub const fn new(cell: Cell, cells_opened: usize, mines_exploded: usize) -> Self {
         OpenResult {
             cell,
             cells_opened,
             mines_exploded,
-            flags_touched,
         }
     }
 }
@@ -120,21 +104,21 @@ pub struct GameState {
 /// from the frontend to interact with the game.
 pub trait MineSweeper: Sized {
     /// Creates a new instance of the game given a starting point.
-    /// The starting point is granted to be a safe cell and also to be surrounded by safe cells (starting point is a `0`).
+    /// The starting point should be granted to be a safe cell and also to be surrounded by safe cells (starting point is a `0`).
     ///
-    /// - Returns [`TooManyMines`](Error::TooManyMines) if the number of mines is greater than the number of cells.
+    /// # Suggested Errors
+    /// - [`TooManyMines`](Error::TooManyMines) if the number of mines is greater than the number of cells.
     /// The "number of cells" is intended as the total number of cells minus the 9 safe cells granted as starting point.
-    /// - Returns [`InvalidParameters`](Error::InvalidParameters) if the number of rows or columns is `0`.
-    /// - Returns [`OutOfBounds`](Error::OutOfBounds) if the starting point is out of bounds.
+    /// - [`InvalidParameters`](Error::InvalidParameters) if the number of rows or columns is `0`.
+    /// - [`OutOfBounds`](Error::OutOfBounds) if the starting point is out of bounds.
     ///
     /// If not overridden, the default rng used is [`rand::thread_rng()`](rand::thread_rng()).
-    fn new<S: Solver>(difficulty: Difficulty, start_from: Coordinate) -> Result<Self> {
-        Self::from_rng::<S>(difficulty, start_from, &mut rand::thread_rng())
+    fn new(difficulty: Difficulty, start_from: Coordinate) -> Result<Self> {
+        Self::from_rng(difficulty, start_from, &mut rand::thread_rng())
     }
     /// Creates a new instance of the game using the given random generator.
     /// Can be used to test the game or to reproduce a specific game by passing a seeded rng.
-    /// Read more about constraints in a newly created game [here](MineSweeper::new).
-    fn from_rng<S: Solver>(
+    fn from_rng(
         difficulty: Difficulty,
         start_from: Coordinate,
         rng: &mut impl Rng,
@@ -144,6 +128,7 @@ pub trait MineSweeper: Sized {
     /// Returns an error if the cell is out of bounds,
     /// otherwise returns an [`OpenResult`](OpenResult).
     ///
+    /// # Implementation
     /// The opening procedure should respect the following rules,
     /// that are not enforced by the game but make the user experience better:
     /// - if the opened cell is a number and it's surrounded by enough flags,
@@ -152,13 +137,13 @@ pub trait MineSweeper: Sized {
     /// - the opening procedure should not stop at the first mine found,
     /// but should keep opening until all safe neighboring cells are opened
     fn open(&mut self, coord: Coordinate) -> Result<OpenResult>;
-    /// todo
+    /// Opens a single cell. May be useful in tests and when implementing a [`Solver`](solver::Solver).
     fn open_one(&mut self, coord: Coordinate) -> Result<CellContent>;
-    /// Tries to toggle the flag on a cell.
+    /// Tries to toggle the flag on a cell and returns the new state.
     ///
-    /// - Returns [`OutOfBounds`](Error::OutOfBounds) if the given coordinate is out of bounds
-    /// - Returns [`AlreadyOpen`](Error::AlreadyOpen) if the cell is already open.
-    /// - Otherwise returns the new state of the given cell.
+    /// # Suggested Errors
+    /// - [`OutOfBounds`](Error::OutOfBounds) if the given coordinate is out of bounds
+    /// - [`AlreadyOpen`](Error::AlreadyOpen) if the cell is already open.
     fn toggle_flag(&mut self, coord: Coordinate) -> Result<CellState>;
     /// Returns the state of the given cell.
     fn get_cell(&self, coord: Coordinate) -> Result<Cell>;
@@ -203,6 +188,4 @@ pub trait MineSweeper: Sized {
         }
         Ok(())
     }
-    // // todo
-    // fn from_triple(height: usize, width: usize, mines: Vec<Coordinate>) -> Self;
 }

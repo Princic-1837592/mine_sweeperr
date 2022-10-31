@@ -4,13 +4,17 @@ use std::fmt::{Display, Formatter};
 use rand::Rng;
 
 use crate::{
-    check, count_neighboring_flags, iter_neighbors, solver::Solver, Cell, CellContent, CellState,
-    Coordinate, Difficulty, Error, GameState, MineSweeper, OpenResult, Result,
+    check, count_neighboring_flags, iter_neighbors, Cell, CellContent, CellState, Coordinate,
+    Difficulty, Error, GameState, MineSweeper, OpenResult, Result,
 };
 
 /// Represents a grid using [`HashSets`](HashSet) of [`Coordinates`](Coordinate).
 /// Use this when you don't want to load the whole grid in memory at the beginning.
 /// Has lower performances when opening cells but takes less memory.
+///
+/// # Solver
+/// This implementation doesn't support the [solver](crate::solver::Solver) yet.
+/// If you want a deterministic board, give a look at [`MSMatrix`](crate::MSMatrix).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MSHash {
     height: usize,
@@ -66,18 +70,11 @@ impl MSHash {
             .filter(|coord| self.mines.contains(coord))
             .count() as u8
     }
-
-    // /// Counts the number of flags around a cell to propagate the opening procedure.
-    // fn count_neighboring_flags(&self, coord: Coordinate) -> u8 {
-    //     iter_neighbors(coord, self.height, self.width)
-    //         .unwrap()
-    //         .filter(|coord| self.flagged.contains(coord))
-    //         .count() as u8
-    // }
 }
 
 impl MineSweeper for MSHash {
-    fn from_rng<S: Solver>(
+    /// Creates a new game performing all the suggested checks.
+    fn from_rng(
         difficulty: Difficulty,
         start_from: Coordinate,
         rng: &mut impl Rng,
@@ -92,17 +89,18 @@ impl MineSweeper for MSHash {
     /// Implements all the additional rules suggested in the [trait interface](MineSweeper::open).
     ///
     /// The opening procedure is made using a [queue](VecDeque) (not recursive).
+    ///
+    /// Due to the implementation with [`HashSet`](HashSet), this method may be quite slow for large grids.
+    /// For better speed performances, use [`MSMatrix`](crate::MSMatrix).
     fn open(&mut self, coord: Coordinate) -> Result<OpenResult> {
         self.check_coordinate(coord)?;
-        let (mut cells_opened, mut mines_exploded, mut flags_touched) = (0, 0, 0);
+        let (mut cells_opened, mut mines_exploded) = (0, 0);
         let mut queue = VecDeque::from([coord]);
         let mut cell: Cell;
         while !queue.is_empty() {
             let coord = queue.pop_front().unwrap();
             cell = self.get_cell(coord).unwrap();
-            if cell.state == CellState::Flagged {
-                flags_touched += 1;
-            } else {
+            if cell.state != CellState::Flagged {
                 if cell.state == CellState::Closed {
                     self.open.insert(coord);
                     cells_opened += 1;
@@ -125,7 +123,6 @@ impl MineSweeper for MSHash {
             self.get_cell(coord).unwrap(),
             cells_opened,
             mines_exploded,
-            flags_touched,
         ))
     }
 

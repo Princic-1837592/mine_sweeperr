@@ -1,24 +1,29 @@
+use std::any::type_name;
 use std::fmt::{Debug, Display};
 
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 
+use test_data::{MSFrom, TestAction, OPEN_DATA};
+
 use crate::{
-    iter_neighbors, solver::NonDeterministic, CellContent, Difficulty, Error, GameState, MSHash,
-    MSMatrix, MineSweeper,
+    iter_neighbors, CellContent, Difficulty, Error, GameState, MSHash,
+    MSMatrix, MineSweeper, Result,
 };
+
+mod test_data;
 
 #[test]
 // #[allow(unused_variables)]
 // #[allow(unused_assignments)]
 fn play() {
-    fn test<T: MineSweeper + Display>(#[allow(unused)] seed: u64) {
+    fn test<M: MineSweeper + Display>(#[allow(unused)] seed: u64) {
         // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
         let difficulty = Difficulty::easy();
         let (h, w, m) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-        let mut ms = T::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng).unwrap();
+        let mut ms = M::from_rng(difficulty, start_from, &mut rng).unwrap();
 
         assert_eq!(ms.height(), h);
         assert_eq!(ms.width(), w);
@@ -53,7 +58,7 @@ fn play() {
 
 #[test]
 fn invalid_number_of_mines() {
-    fn test<T: MineSweeper>(#[allow(unused)] seed: u64) {
+    fn test<M: MineSweeper>(#[allow(unused)] seed: u64) {
         // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
@@ -62,27 +67,32 @@ fn invalid_number_of_mines() {
         let mut difficulty = Difficulty::custom(h, w, m);
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
 
-        match T::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng) {
-            Err(Error::TooManyMines) => (),
-            Err(_) => {
-                panic!("Wrong error: MineSweeper::new should panic with Error::TooManyMines!")
-            }
-            Ok(_) => panic!("MineSweeper::new should panic!"),
-        }
+        check_success(M::from_rng(
+            difficulty, start_from, &mut rng,
+        ));
 
         m = w * h - 9;
         difficulty = Difficulty::custom(h, w, m);
-        match T::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng) {
-            Err(Error::TooManyMines) => (),
-            Err(_) => {
-                panic!("Wrong error: MineSweeper::new should panic with Error::TooManyMines!")
-            }
-            Ok(_) => panic!("MineSweeper::new should panic!"),
-        }
+        check_success(M::from_rng(
+            difficulty, start_from, &mut rng,
+        ));
 
         m = w * h - 10;
         difficulty = Difficulty::custom(h, w, m);
-        assert!(T::new::<NonDeterministic>(difficulty, start_from).is_ok());
+        assert!(M::new(difficulty, start_from).is_ok());
+    }
+
+    fn check_success<M: MineSweeper>(ms: Result<M>) {
+        match ms {
+            Err(Error::TooManyMines) => (),
+            Err(_) => {
+                panic!(
+                    "Wrong error: {}::new should panic with Error::TooManyMines!",
+                    type_name::<M>()
+                )
+            }
+            Ok(_) => panic!("{}::new should panic!", type_name::<M>()),
+        }
     }
 
     for seed in 0..10 {
@@ -93,14 +103,14 @@ fn invalid_number_of_mines() {
 
 #[test]
 fn start_from() {
-    fn test<T: MineSweeper>(#[allow(unused)] seed: u64) {
+    fn test<M: MineSweeper>(#[allow(unused)] seed: u64) {
         // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
         let difficulty = Difficulty::hard();
         let (h, w, _) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-        let mut ms: T = T::new::<NonDeterministic>(difficulty, start_from).unwrap();
+        let mut ms: M = M::new(difficulty, start_from).unwrap();
 
         assert!(
             ms.open(start_from).unwrap().cells_opened
@@ -126,7 +136,7 @@ fn start_from() {
 
 #[test]
 fn invalid_start_from() {
-    fn test<T: MineSweeper>(#[allow(unused)] seed: u64) {
+    fn test<M: MineSweeper>(#[allow(unused)] seed: u64) {
         // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
 
@@ -134,16 +144,19 @@ fn invalid_start_from() {
         let (h, w, _) = difficulty.into();
         let start_from = (h, w);
 
-        match T::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng) {
+        match M::from_rng(difficulty, start_from, &mut rng) {
             Err(Error::OutOfBounds) => (),
             Err(_) => {
-                panic!("Wrong error: MineSweeper::new should panic with Error::OutOfBounds!")
+                panic!(
+                    "Wrong error: {}::new should panic with Error::OutOfBounds!",
+                    type_name::<M>()
+                )
             }
-            Ok(_) => panic!("MineSweeper::new should panic!"),
+            Ok(_) => panic!("{}::new should panic!", type_name::<M>()),
         }
 
         let start_from = (h - 1, w - 1);
-        assert!(T::new::<NonDeterministic>(difficulty, start_from).is_ok());
+        assert!(M::new(difficulty, start_from).is_ok());
     }
 
     for seed in 0..10 {
@@ -156,10 +169,10 @@ fn invalid_start_from() {
 // #[allow(unused_variables)]
 // #[allow(unused_assignments)]
 fn compare_implementations() {
-    fn test<T, E>(seed: u64)
+    fn test<M1, M2>(seed: u64)
     where
-        T: MineSweeper + Display,
-        E: MineSweeper + Display,
+        M1: MineSweeper + Display,
+        M2: MineSweeper + Display,
     {
         let mut rng = StdRng::seed_from_u64(seed);
         // let mut rng = thread_rng();
@@ -168,9 +181,9 @@ fn compare_implementations() {
         let (h, w, _) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
         let mut ms_1 =
-            T::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng.clone()).unwrap();
+            M1::from_rng(difficulty, start_from, &mut rng.clone()).unwrap();
         let mut ms_2 =
-            E::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng.clone()).unwrap();
+            M2::from_rng(difficulty, start_from, &mut rng.clone()).unwrap();
 
         assert_eq!(ms_1.to_string(), ms_2.to_string());
 
@@ -208,9 +221,9 @@ fn compare_implementations() {
 
 #[test]
 fn game_state() {
-    fn test<T>(#[allow(unused)] seed: u64)
+    fn test<M>(#[allow(unused)] seed: u64)
     where
-        T: MineSweeper + Display + Debug,
+        M: MineSweeper + Display + Debug,
     {
         // let mut rng = StdRng::seed_from_u64(seed);
         let mut rng = thread_rng();
@@ -218,7 +231,7 @@ fn game_state() {
         let difficulty = Difficulty::easy();
         let (h, w, m) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-        let mut ms = T::from_rng::<NonDeterministic>(difficulty, start_from, &mut rng).unwrap();
+        let mut ms = M::from_rng(difficulty, start_from, &mut rng).unwrap();
 
         assert_eq!(ms.height(), h);
         assert_eq!(ms.width(), w);
@@ -277,5 +290,49 @@ fn game_state() {
     for seed in 0..10 {
         test::<MSMatrix>(seed);
         test::<MSHash>(seed);
+    }
+}
+
+#[test]
+fn open_result() {
+    fn test<'a, M>(tuple: MSFrom<'a>, results: &[TestAction])
+    where
+        M: MineSweeper + Display + From<MSFrom<'a>>,
+    {
+        let mut ms: M = tuple.into();
+        for (i, action) in results.iter().enumerate() {
+            match action {
+                TestAction::Open(coord, result) => {
+                    assert_eq!(
+                        ms.open(*coord)
+                            .expect("OpenResult should be safe to unwrap"),
+                        *result,
+                        "{} returned wrong open result at {:?} (action index: {})",
+                        type_name::<M>(),
+                        coord,
+                        i
+                    );
+                }
+                TestAction::Flag(coord, state) => {
+                    assert_eq!(
+                        ms.toggle_flag(*coord)
+                            .expect("CellState should be safe to unwrap"),
+                        *state,
+                        "{} returned wrong flag result at {:?} (action index: {})",
+                        type_name::<M>(),
+                        coord,
+                        i
+                    );
+                }
+            }
+        }
+        assert_eq!(
+            ms.get_game_state().opened,
+            ms.height() * ms.width() - ms.mines()
+        );
+    }
+
+    for (tuple, results) in OPEN_DATA {
+        test::<MSMatrix>(*tuple, results);
     }
 }

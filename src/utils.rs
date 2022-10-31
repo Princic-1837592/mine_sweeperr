@@ -1,12 +1,12 @@
 use std::fmt::Write;
 
-use crate::{CellState, Coordinate, Error::OutOfBounds, MineSweeper, Result};
+use crate::{CellContent, CellState, Coordinate, Error::OutOfBounds, MineSweeper, Result};
 
 /// Contains emoji numbers from 0 to 9. position 10 is the emoji to represent a 0-cell.
 pub(crate) const NUMBERS: [&str; 11] = ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🟩"];
 pub(crate) const ROW_NUMBER_RIGHT_SEPARATOR: &str = "  ";
 
-/// Returns an iterator over the neighbors of the given cell.
+/// Returns an iterator over the neighbors of the given cell (excluded the cell itself).
 /// If the coordinates are out of bounds returns [`OutOfBounds`](OutOfBounds).
 /// You can safely unwrap the result if you are sure that the given coordinates are in bounds.
 pub fn iter_neighbors(
@@ -36,18 +36,18 @@ pub(crate) fn count_neighboring_flags(ms: &impl MineSweeper, coord: Coordinate) 
     get_neighboring_flags(ms, coord).count() as u8
 }
 
-// pub(crate) fn get_neighboring_mines(
-//     ms: &impl MineSweeper,
-//     coord: Coordinate,
-// ) -> impl Iterator<Item = Coordinate> + '_ {
-//     iter_neighbors(coord, ms.height(), ms.width())
-//         .unwrap()
-//         .filter(|&neighbor| ms.get_cell(neighbor).unwrap().content == CellContent::Mine)
-// }
+pub(crate) fn get_neighboring_mines(
+    ms: &impl MineSweeper,
+    coord: Coordinate,
+) -> impl Iterator<Item = Coordinate> + '_ {
+    iter_neighbors(coord, ms.height(), ms.width())
+        .unwrap()
+        .filter(|&neighbor| ms.get_cell(neighbor).unwrap().content == CellContent::Mine)
+}
 
-// pub(crate) fn count_neighboring_mines(ms: &impl MineSweeper, coord: Coordinate) -> u8 {
-//     get_neighboring_mines(ms, coord).count() as u8
-// }
+pub(crate) fn count_neighboring_mines(ms: &impl MineSweeper, coord: Coordinate) -> u8 {
+    get_neighboring_mines(ms, coord).count() as u8
+}
 
 pub(crate) fn get_neighboring_closed(ms: &impl MineSweeper, coord: Coordinate) -> Vec<Coordinate> {
     iter_neighbors(coord, ms.height(), ms.width())
@@ -118,98 +118,4 @@ pub(crate) fn get_row_number(number: usize, width: usize, use_emojis: bool) -> S
         }
     }
     result
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::HashSet;
-
-    use crate::{get_column_numbers, iter_neighbors};
-
-    #[test]
-    fn neighbors() {
-        let (h, w) = (10, 10);
-        let mut neighbors: HashSet<_> = iter_neighbors((0, 0), h, w).unwrap().collect();
-        assert_eq!(neighbors, HashSet::from([(1, 1), (0, 1), (1, 0)]));
-
-        neighbors = iter_neighbors((h - 1, w - 1), h, w).unwrap().collect();
-        assert_eq!(
-            neighbors,
-            HashSet::from([(h - 2, w - 1), (h - 2, w - 2), (h - 1, w - 2)])
-        );
-
-        neighbors = iter_neighbors((h - 1, w - 2), h, w).unwrap().collect();
-        assert_eq!(
-            neighbors,
-            HashSet::from([
-                (h - 1, w - 3),
-                (h - 2, w - 1),
-                (h - 2, w - 3),
-                (h - 2, w - 2),
-                (h - 1, w - 1)
-            ])
-        );
-
-        neighbors = iter_neighbors((0, 1), h, w).unwrap().collect();
-        assert_eq!(
-            neighbors,
-            HashSet::from([(1, 0), (0, 2), (0, 0), (1, 1), (1, 2)])
-        );
-
-        neighbors = iter_neighbors((1, 1), h, w).unwrap().collect();
-        assert_eq!(
-            neighbors,
-            HashSet::from([
-                (1, 2),
-                (1, 0),
-                (0, 2),
-                (0, 0),
-                (2, 0),
-                (2, 1),
-                (2, 2),
-                (0, 1)
-            ])
-        );
-    }
-
-    #[test]
-    fn test_column_numbers() {
-        let mut expected = r#"
-🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣
-
-"#[1..]
-            .to_string();
-        assert_eq!(expected, get_column_numbers(9, 9, true));
-
-        expected = r#"
-   0123456789
-
-"#[1..]
-            .to_string();
-        assert_eq!(expected, get_column_numbers(10, 10, false));
-
-        expected = r#"
-🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣1️⃣1️⃣1️⃣
-🟫🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣
-
-"#[1..]
-            .to_string();
-        assert_eq!(expected, get_column_numbers(15, 15, true));
-
-        expected = r#"
-                111111111122222
-      0123456789012345678901234
-
-"#[1..]
-            .to_string();
-        assert_eq!(expected, get_column_numbers(1250, 25, false));
-
-        expected = r#"
-🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣1️⃣1️⃣1️⃣
-🟫🟫  🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣2️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣3️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣4️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣5️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣6️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣7️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣8️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣9️⃣0️⃣0️⃣0️⃣0️⃣0️⃣
-🟫🟫  0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣0️⃣1️⃣2️⃣3️⃣4️⃣
-
-"#[1..].to_string();
-        assert_eq!(expected, get_column_numbers(11, 105, true));
-    }
 }

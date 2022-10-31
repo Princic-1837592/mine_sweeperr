@@ -1,16 +1,28 @@
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
 
+use rand::seq::SliceRandom;
 use rand::Rng;
 
+use crate::solver::NonDeterministic;
 use crate::{
-    check, count_neighboring_flags, iter_neighbors, solver::Solver, Cell, CellContent, CellState,
-    Coordinate, Difficulty, Error, GameState, MineSweeper, OpenResult, Result,
+    check, count_neighboring_flags, count_neighboring_mines, iter_neighbors, solver::Solver, Cell,
+    CellContent, CellState, Coordinate, Difficulty, Error, GameState, MineSweeper, OpenResult,
+    Result,
 };
+
+// const MAX_SHUFFLE: usize = 10;
 
 /// Represents the grid using a matrix of [`cells`](Cell).
 /// Use this when you want to load the whole grid in memory at the beginning.
-/// Has higher performances when opening cells but takes more memory.
+/// Has better performances when opening cells but takes more memory.
+///
+/// # Solver
+/// This implementation supports passing a [`Solver`](crate::solver::Solver)
+/// to both the constructors. if you use the trait constructors
+/// ([`new`](MineSweeper::new) and [`from_rng`](MineSweeper::from_rng))
+/// to create an instance of this struct,
+/// the [default solver](crate::solver::NonDeterministic) will be used.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MSMatrix {
     height: usize,
@@ -21,9 +33,35 @@ pub struct MSMatrix {
     opened: usize,
     flagged: usize,
     exploded: usize,
+    seed: u64,
 }
 
 impl MSMatrix {
+    /// Creates a new instance of the game with the given solver and the default rng ([`thread_rng`](rand::thread_rng)).
+    pub fn new<S: Solver<Self>>(difficulty: Difficulty, start_from: Coordinate) -> Result<Self> {
+        Self::from_rng::<S>(difficulty, start_from, &mut rand::thread_rng())
+    }
+
+    /// Creates a new instance of the game with the given solver and the given rng.
+    pub fn from_rng<S: Solver<Self>>(
+        difficulty: Difficulty,
+        start_from: Coordinate,
+        rng: &mut impl Rng,
+    ) -> Result<Self> {
+        let difficulty @ (height, width, mines) = difficulty.into();
+        check!(difficulty, start_from);
+        let mut result;
+        loop {
+            result = Self::new_unchecked(height, width, mines, start_from);
+            result.randomize_mines(mines, start_from, rng);
+            let mut solver = S::new(&result);
+            if solver.solve(start_from) {
+                break;
+            }
+        }
+        Ok(result)
+    }
+
     /// Creates a new instance.
     fn new_unchecked(height: usize, width: usize, mines: usize, start_from: Coordinate) -> Self {
         Self {
@@ -35,6 +73,7 @@ impl MSMatrix {
             opened: 0,
             flagged: 0,
             exploded: 0,
+            seed: 0,
         }
     }
 
@@ -77,33 +116,74 @@ impl MSMatrix {
         }
     }
 
-    // /// Counts the number of flags around a cell to propagate the opening procedure.
-    // fn count_neighboring_flags(&self, coord: Coordinate) -> u8 {
-    //     iter_neighbors(coord, self.height, self.width)
-    //         .unwrap()
-    //         .filter(|(r, c)| self.cells[*r][*c].state == CellState::Flagged)
-    //         .count() as u8
-    // }
+    fn decrement_neighbors(&mut self, coord: Coordinate) {
+        iter_neighbors(coord, self.height, self.width)
+            .unwrap()
+            .for_each(|(r, c)| {
+                if let CellContent::Number(n) = self.cells[r][c].content {
+                    self.cells[r][c].content = CellContent::Number(n - 1);
+                }
+            });
+    }
+
+    fn extract_mine(&mut self, coord @ (r, c): Coordinate) {
+        self.decrement_neighbors(coord);
+        self.cells[r][c].content = CellContent::Number(count_neighboring_mines(self, coord));
+    }
+
+    #[allow(unused)]
+    fn swap_cells(&mut self, old_mine @ (r1, c1): Coordinate, new_mine @ (r2, c2): Coordinate) {
+        if cfg!(test) {
+            // println!("Swapping cells {:?} and {:?}", old_mine, new_mine);
+            assert_eq!(self.cells[r1][c1].content, CellContent::Mine);
+            assert_ne!(self.cells[r2][c2].content, CellContent::Mine);
+        }
+        self.extract_mine(old_mine);
+        self.cells[r2][c2].content = CellContent::Mine;
+        self.increment_neighbors(new_mine);
+    }
+
+    #[allow(unused)]
+    fn shuffle(&mut self, clusters: Vec<Vec<Coordinate>>, rng: &mut impl Rng) {
+        for cluster in clusters {
+            let mut from_mine;
+            loop {
+                from_mine = *cluster.choose(rng).unwrap();
+                if self.cells[from_mine.0][from_mine.1].content == CellContent::Mine {
+                    break;
+                }
+            }
+            let mut to_cell;
+            loop {
+                to_cell = *cluster.choose(rng).unwrap();
+                if self.cells[to_cell.0][to_cell.1].content != CellContent::Mine {
+                    break;
+                }
+            }
+            self.swap_cells(from_mine, to_cell);
+        }
+    }
+
+    #[cfg(test)]
+    #[allow(unused)]
+    fn print_raw(&self) {
+        for row in &self.cells {
+            for cell in row {
+                print!("{} ", cell.content);
+            }
+            println!();
+        }
+        println!("\n");
+    }
 }
 
 impl MineSweeper for MSMatrix {
-    fn from_rng<S: Solver>(
+    fn from_rng(
         difficulty: Difficulty,
         start_from: Coordinate,
         rng: &mut impl Rng,
     ) -> Result<Self> {
-        let difficulty @ (height, width, mines) = difficulty.into();
-        check!(difficulty, start_from);
-        let mut result;
-        loop {
-            result = Self::new_unchecked(height, width, mines, start_from);
-            result.randomize_mines(mines, start_from, rng);
-            if S::solve(&result, start_from).unwrap_or(false) {
-                break;
-            }
-            // println!("Failed to generate a valid board, retrying...");
-        }
-        Ok(result)
+        Self::from_rng::<NonDeterministic>(difficulty, start_from, rng)
     }
 
     /// Implements all the additional rules suggested in the [trait interface](MineSweeper::open).
@@ -111,13 +191,11 @@ impl MineSweeper for MSMatrix {
     /// The opening procedure is made using a [queue](VecDeque) (not recursive).
     fn open(&mut self, coord @ (r, c): Coordinate) -> Result<OpenResult> {
         self.check_coordinate(coord)?;
-        let (mut cells_opened, mut mines_exploded, mut flags_touched) = (0_usize, 0_usize, 0_usize);
+        let (mut cells_opened, mut mines_exploded) = (0, 0);
         let mut queue = VecDeque::from([coord]);
         while !queue.is_empty() {
             let coord @ (r, c) = queue.pop_front().unwrap();
-            if self.cells[r][c].state == CellState::Flagged {
-                flags_touched += 1;
-            } else {
+            if self.cells[r][c].state != CellState::Flagged {
                 if self.cells[r][c].state == CellState::Closed {
                     self.cells[r][c].state = CellState::Open;
                     cells_opened += 1;
@@ -144,7 +222,6 @@ impl MineSweeper for MSMatrix {
             self.cells[r][c],
             cells_opened,
             mines_exploded,
-            flags_touched,
         ))
     }
 
@@ -213,6 +290,7 @@ impl Display for MSMatrix {
     }
 }
 
+#[cfg(test)]
 impl From<(usize, usize, &[usize], (usize, usize))> for MSMatrix {
     fn from((height, width, mines, start_from): (usize, usize, &[usize], (usize, usize))) -> Self {
         let mut result = Self::new_unchecked(height, width, mines.len(), (0, 0));
@@ -221,26 +299,65 @@ impl From<(usize, usize, &[usize], (usize, usize))> for MSMatrix {
             result.increment_neighbors(coord);
         }
         result.start_from = start_from;
-        // for row in result.cells.iter() {
-        //     for cell in row.iter() {
-        //         print!("{:?} ", cell.content);
-        //     }
-        //     println!();
-        // }
         result
     }
 }
 
-impl From<MSMatrix> for (usize, usize, Vec<usize>, (usize, usize)) {
-    fn from<'a>(ms: MSMatrix) -> Self {
-        let mut mines = Vec::with_capacity(ms.mines);
-        for r in 0..ms.height {
-            for c in 0..ms.width {
-                if ms.cells[r][c].content == CellContent::Mine {
-                    mines.push(r * ms.width + c);
-                }
+#[cfg(test)]
+#[allow(unused_imports)]
+mod tests {
+    use rand::rngs::StdRng;
+    use rand::{thread_rng, SeedableRng};
+
+    use crate::solver::CSPSolver;
+    use crate::{Coordinate, Difficulty, MSMatrix};
+
+    type MSFrom<'a> = (usize, usize, &'a [usize], (usize, usize));
+
+    #[allow(clippy::type_complexity)]
+    static SWAP_DATA: &[(MSFrom, &[(Coordinate, Coordinate, MSFrom)])] = &[(
+        (9, 9, &[4, 6, 15, 16, 19, 47, 51, 68, 70, 74], (0, 0)),
+        &[
+            (
+                (2, 1),
+                (0, 2),
+                (9, 9, &[2, 4, 6, 15, 16, 47, 51, 68, 70, 74], (0, 0)),
+            ),
+            (
+                (7, 7),
+                (3, 8),
+                (9, 9, &[2, 4, 6, 15, 16, 35, 47, 51, 68, 74], (0, 0)),
+            ),
+            (
+                (5, 6),
+                (5, 1),
+                (9, 9, &[2, 4, 6, 15, 16, 35, 46, 47, 68, 74], (0, 0)),
+            ),
+        ],
+    )];
+
+    #[test]
+    fn swap_mines() {
+        for (starting_point, swaps) in SWAP_DATA {
+            let mut ms: MSMatrix = (*starting_point).into();
+            for (from, to, result) in *swaps {
+                ms.swap_cells(*from, *to);
+                assert_eq!(ms, (*result).into());
             }
         }
-        (ms.height, ms.width, mines, ms.start_from)
+    }
+
+    #[test]
+    #[allow(unused)]
+    fn smart_generation() {
+        let n = 1000;
+        for i in 0..n {
+            // let mut rng = StdRng::seed_from_u64(i);
+            let mut rng = thread_rng();
+            // let difficulty = Difficulty::custom(100, 100, 2000);
+            let difficulty = Difficulty::medium();
+            // let difficulty = Difficulty::hard();
+            let ms = MSMatrix::from_rng::<CSPSolver>(difficulty, (0, 0), &mut rng);
+        }
     }
 }

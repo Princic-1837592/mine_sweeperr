@@ -1,9 +1,9 @@
-/// TODO Represents the difficulty of a game in terms of height, width and number of mines.
+/// Represents the difficulty of a game in terms of height, width and number of mines.
 ///
-/// When calling [`MineSweeper::new`](MineSweeper::new) or [`MineSweeper::from_rng`](MineSweeper::from_rng)
+/// When calling [`MineSweeper::new`](crate::MineSweeper::new) or [`MineSweeper::from_rng`](crate::MineSweeper::from_rng)
 /// you can either pass a default difficulty or a custom one.
 ///
-/// The default difficulties are:
+/// Default difficulties are:
 /// - `Easy`: `9x9` grid with `10` mines
 /// - `Medium`: `16x16` grid with `40` mines
 /// - `Hard`: `16x30` grid with `99` mines
@@ -14,6 +14,7 @@
 /// ```
 /// # use mine_sweeperr::Difficulty;
 /// let difficulty: Difficulty = (10, 10, 0.1).into();
+/// # assert_eq!((difficulty.height(), difficulty.width(), difficulty.mines()), (10, 10, 10));
 /// ```
 /// will produce a difficulty with `10x10` grid and `10` mines.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -50,6 +51,18 @@ impl Difficulty {
 
     pub fn from_density(height: usize, width: usize, density: f32) -> Self {
         Self::new(height, width, ((height * width) as f32 * density) as usize)
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn mines(&self) -> usize {
+        self.mines
     }
 }
 

@@ -1,18 +1,21 @@
-use std::borrow::{Borrow, BorrowMut};
+use std::borrow::Borrow;
 use std::cell::RefCell;
+use std::cmp::Ordering;
+#[cfg(test)]
+use std::fmt::{Debug, Display, Formatter};
 use std::rc::Rc;
 
 use crate::solver::csp::board::{Board, BoardCell};
-use crate::solver::csp::constraint::{Constraint, ConstraintList};
+use crate::solver::csp::constraint::Constraint;
 
 pub(crate) struct SolutionSet {
     constraints: Vec<Rc<RefCell<Constraint>>>,
     variables: Vec<Rc<RefCell<BoardCell>>>,
     nodes: Vec<ConstraintList>,
-    solutions: Vec<i32>,
-    mines: Vec<Vec<i32>>,
-    min: i32,
-    max: i32,
+    solutions: Vec<isize>,
+    mines: Vec<Vec<isize>>,
+    min: isize,
+    max: isize,
 }
 
 impl SolutionSet {
@@ -33,7 +36,7 @@ impl SolutionSet {
 
     fn construct(&mut self) {
         for constraint in &self.constraints {
-            let (mut var_array, mut found);
+            let (var_array, mut found);
             var_array = <RefCell<_>>::borrow(constraint).get_variables();
             for variable in var_array {
                 found = false;
@@ -67,22 +70,25 @@ impl SolutionSet {
         }
     }
 
-    pub fn get_variable_count(&self) -> i32 {
-        self.variables.len() as i32
+    #[allow(unused)]
+    pub fn get_variable_count(&self) -> isize {
+        self.variables.len() as isize
     }
 
-    pub fn get_constraint_count(&self) -> i32 {
-        self.constraints.len() as i32
+    #[allow(unused)]
+    pub fn get_constraint_count(&self) -> isize {
+        self.constraints.len() as isize
     }
 
-    pub fn get_min(&self) -> i32 {
+    pub fn get_min(&self) -> isize {
         self.min
     }
 
-    pub fn get_max(&self) -> i32 {
+    pub fn get_max(&self) -> isize {
         self.max
     }
 
+    #[allow(unused)]
     pub fn expected_mines(&self) -> f32 {
         let (mut total, mut count) = (0, 0);
         for i in self.min..self.max + 1 {
@@ -92,7 +98,7 @@ impl SolutionSet {
         total as f32 / count as f32
     }
 
-    pub fn reduce_min_max(&mut self, min: i32, max: i32) {
+    pub fn reduce_min_max(&mut self, min: isize, max: isize) {
         if min > self.min {
             for i in self.min..min {
                 self.solutions[i as usize] = 0;
@@ -141,7 +147,7 @@ impl SolutionSet {
         }
         let mut level = 0;
         loop {
-            if level == self.variables.len() as i32 {
+            if level == self.variables.len() as isize {
                 let mut m = 0;
                 for variable in &self.variables {
                     m += <RefCell<_>>::borrow(variable).test_assignment;
@@ -169,8 +175,8 @@ impl SolutionSet {
                     i += 1;
                 }
                 match variable {
-                    Some(mut var) => {
-                        variable_index[level as usize] = self.variables.len() as i32;
+                    Some(var) => {
+                        variable_index[level as usize] = self.variables.len() as isize;
                         loop {
                             variable_index[level as usize] -= 1;
                             if self.variables[variable_index[level as usize] as usize] == var {
@@ -227,5 +233,108 @@ impl SolutionSet {
                 break;
             }
         }
+    }
+
+    pub fn get_variables(&self) -> Vec<Rc<RefCell<BoardCell>>> {
+        self.variables.iter().map(Rc::clone).collect()
+    }
+}
+
+pub(crate) struct ConstraintList {
+    pub variable: Rc<RefCell<BoardCell>>,
+    pub constraints: Vec<Rc<RefCell<Constraint>>>,
+}
+
+impl ConstraintList {
+    pub fn new(constraint: Rc<RefCell<Constraint>>, variable: Rc<RefCell<BoardCell>>) -> Self {
+        ConstraintList {
+            variable,
+            constraints: vec![constraint],
+        }
+    }
+
+    pub fn add_constraint(&mut self, constraint: Rc<RefCell<Constraint>>) {
+        self.constraints.push(constraint);
+    }
+
+    pub fn update_constraints(&self) {
+        for constraint in &self.constraints {
+            <RefCell<_>>::borrow_mut(constraint).update_variable(Some(Rc::clone(&self.variable)));
+        }
+    }
+
+    pub fn check_constraints(&self) -> bool {
+        self.constraints
+            .iter()
+            .all(|c| <RefCell<_>>::borrow(c).is_satisfied())
+    }
+}
+
+impl PartialEq for ConstraintList {
+    fn eq(&self, other: &Self) -> bool {
+        self.constraints.len() == other.constraints.len()
+    }
+}
+
+impl PartialOrd for ConstraintList {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(
+            self.constraints
+                .len()
+                .cmp(&other.constraints.len())
+                .reverse(),
+        )
+    }
+}
+
+impl Eq for ConstraintList {}
+
+impl Ord for ConstraintList {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
+#[cfg(test)]
+impl Debug for ConstraintList {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.constraints
+                .iter()
+                .map(|c| <RefCell<_>>::borrow(c).to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+}
+
+#[cfg(test)]
+impl Display for ConstraintList {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[cfg(test)]
+impl Debug for SolutionSet {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[{}]",
+            self.nodes
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(",\n")
+        )
+    }
+}
+
+#[cfg(test)]
+impl Display for SolutionSet {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
 }

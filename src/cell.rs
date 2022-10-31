@@ -19,10 +19,25 @@ pub enum CellContent {
 
 impl Display for CellContent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CellContent::Mine => write!(f, "*"),
-            CellContent::Number(n) if *n > 0 => write!(f, "{}", n),
-            CellContent::Number(_) => write!(f, " "),
+        if f.alternate() {
+            match self {
+                CellContent::Mine => write!(f, "🟥"),
+                CellContent::Number(n) => write!(
+                    f,
+                    "{}",
+                    if *n > 0 {
+                        NUMBERS[*n as usize]
+                    } else {
+                        NUMBERS[10]
+                    }
+                ),
+            }
+        } else {
+            match self {
+                CellContent::Mine => write!(f, "*"),
+                CellContent::Number(0) => write!(f, " "),
+                CellContent::Number(n) => write!(f, "{}", n),
+            }
         }
     }
 }
@@ -36,15 +51,15 @@ pub struct Cell {
 
 impl Cell {
     /// Creates a new cell with the given state and content.
-    pub fn new(state: CellState, content: CellContent) -> Self {
+    pub const fn new(state: CellState, content: CellContent) -> Self {
         Cell { state, content }
     }
     /// Creates a new cell with state [`closed`](CellState::Closed) and content [`0`](CellContent::Number).
-    pub fn closed() -> Self {
+    pub const fn closed() -> Self {
         Self::new(CellState::Closed, CellContent::Number(0))
     }
     /// Creates a new cell with state [`open`](CellState::Open) and content [`0`](CellContent::Number).
-    pub fn open() -> Self {
+    pub const fn open() -> Self {
         Self::new(CellState::Open, CellContent::Number(0))
     }
 }
@@ -87,33 +102,13 @@ impl Display for Cell {
         if f.alternate() {
             match self.state {
                 CellState::Closed => write!(f, "🟪"),
-                CellState::Open => match self.content {
-                    CellContent::Mine => write!(f, "🟥"),
-                    CellContent::Number(n) => write!(
-                        f,
-                        "{}",
-                        if n > 0 {
-                            NUMBERS[n as usize]
-                        } else {
-                            NUMBERS[10]
-                        }
-                    ),
-                },
+                CellState::Open => self.content.fmt(f),
                 CellState::Flagged => write!(f, "🟨"),
             }
         } else {
             match self.state {
                 CellState::Closed => write!(f, "C"),
-                CellState::Open => match self.content {
-                    CellContent::Mine => write!(f, "M"),
-                    CellContent::Number(n) => {
-                        if n > 0 {
-                            write!(f, "{}", n)
-                        } else {
-                            write!(f, " ")
-                        }
-                    }
-                },
+                CellState::Open => self.content.fmt(f),
                 CellState::Flagged => write!(f, "F"),
             }
         }
