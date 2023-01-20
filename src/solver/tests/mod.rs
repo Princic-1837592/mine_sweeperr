@@ -1,8 +1,6 @@
-use std::any::type_name;
-use std::fmt::Display;
+use std::{any::type_name, fmt::Display};
 
 use rand::thread_rng;
-
 use test_data::{MSFrom, CSP_SOLVABLE};
 
 use crate::{

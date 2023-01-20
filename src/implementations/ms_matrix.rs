@@ -1,14 +1,15 @@
-use std::collections::VecDeque;
-use std::fmt::{Display, Formatter};
+use std::{
+    collections::VecDeque,
+    fmt::{Display, Formatter},
+};
 
-use rand::seq::SliceRandom;
-use rand::Rng;
+use rand::{seq::SliceRandom, Rng};
 
-use crate::solver::NonDeterministic;
 use crate::{
-    check, count_neighboring_flags, count_neighboring_mines, iter_neighbors, solver::Solver, Cell,
-    CellContent, CellState, Coordinate, Difficulty, Error, GameState, MineSweeper, OpenResult,
-    Result,
+    check, count_neighboring_flags, count_neighboring_mines, iter_neighbors, solver,
+    solver::{NonDeterministic, Solver},
+    Cell, CellContent, CellState, Coordinate, Difficulty, Error, GameState, MineSweeper,
+    OpenResult, Result,
 };
 
 // const MAX_SHUFFLE: usize = 10;
@@ -18,11 +19,11 @@ use crate::{
 /// Has better performances when opening cells but takes more memory.
 ///
 /// # Solver
-/// This implementation supports passing a [`Solver`](crate::solver::Solver)
+/// This implementation supports passing a [`Solver`](Solver)
 /// to both the constructors. if you use the trait constructors
 /// ([`new`](MineSweeper::new) and [`from_rng`](MineSweeper::from_rng))
 /// to create an instance of this struct,
-/// the [default solver](crate::solver::NonDeterministic) will be used.
+/// the [default solver](NonDeterministic) will be used.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MSMatrix {
     height: usize,
@@ -306,11 +307,9 @@ impl From<(usize, usize, &[usize], (usize, usize))> for MSMatrix {
 #[cfg(test)]
 #[allow(unused_imports)]
 mod tests {
-    use rand::rngs::StdRng;
-    use rand::{thread_rng, SeedableRng};
+    use rand::{rngs::StdRng, thread_rng, SeedableRng};
 
-    use crate::solver::CSPSolver;
-    use crate::{Coordinate, Difficulty, MSMatrix};
+    use crate::{solver::CSPSolver, Coordinate, Difficulty, MSMatrix};
 
     type MSFrom<'a> = (usize, usize, &'a [usize], (usize, usize));
 

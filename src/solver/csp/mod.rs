@@ -1,13 +1,10 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 use board::Board;
 use constraint::Constraint;
 
-use crate::solver::csp::board::MINE;
-use crate::{Coordinate, MineSweeper};
-
 use super::{csp::solution_set::SolutionSet, Solver};
+use crate::{solver::csp::board::MINE, Coordinate, MineSweeper};
 
 mod board;
 mod constraint;

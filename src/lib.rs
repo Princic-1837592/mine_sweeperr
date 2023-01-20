@@ -8,7 +8,7 @@
 //!
 //! to use it.
 //! ```
-//! use mine_sweeperr::{MSMatrix, MineSweeper, Difficulty, solver::NonDeterministic};
+//! use mine_sweeperr::{solver::NonDeterministic, Difficulty, MSMatrix, MineSweeper};
 //!
 //! // Create a new game with a 16x16 board and 40 mines
 //! // setting the starting point at (0, 0)
@@ -29,11 +29,10 @@
 
 use std::fmt::{Display, Formatter};
 
-use rand::Rng;
-
 pub use cell::*;
 pub use difficulty::*;
 pub use implementations::*;
+use rand::Rng;
 use solver::Solver;
 pub use utils::*;
 
@@ -118,11 +117,8 @@ pub trait MineSweeper: Sized {
     }
     /// Creates a new instance of the game using the given random generator.
     /// Can be used to test the game or to reproduce a specific game by passing a seeded rng.
-    fn from_rng(
-        difficulty: Difficulty,
-        start_from: Coordinate,
-        rng: &mut impl Rng,
-    ) -> Result<Self>;
+    fn from_rng(difficulty: Difficulty, start_from: Coordinate, rng: &mut impl Rng)
+        -> Result<Self>;
     /// Tries to open a cell.
     ///
     /// Returns an error if the cell is out of bounds,

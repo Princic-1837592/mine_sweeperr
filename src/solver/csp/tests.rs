@@ -1,7 +1,5 @@
-use crate::solver::CSPSolver;
-use crate::{MSMatrix, MineSweeper, Solver};
-
 use super::super::tests::test_data::CSP_SOLVABLE;
+use crate::{solver::CSPSolver, MSMatrix, MineSweeper, Solver};
 
 #[test]
 #[allow(unused)]

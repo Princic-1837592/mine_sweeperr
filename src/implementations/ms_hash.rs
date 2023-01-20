@@ -1,5 +1,7 @@
-use std::collections::{HashSet, VecDeque};
-use std::fmt::{Display, Formatter};
+use std::{
+    collections::{HashSet, VecDeque},
+    fmt::{Display, Formatter},
+};
 
 use rand::Rng;
 

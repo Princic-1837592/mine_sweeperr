@@ -1,11 +1,7 @@
-use std::cell::RefCell;
-use std::fmt::Display;
-use std::rc::Rc;
-
-use crate::{Cell, CellContent, CellState, Coordinate, iter_neighbors, MineSweeper};
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use super::Constraint;
-
+use crate::{iter_neighbors, Cell, CellContent, CellState, Coordinate, MineSweeper};
 
 pub(crate) const UNKNOWN: isize = -5;
 pub(crate) const CONSTRAINED: isize = -4;
@@ -335,7 +331,7 @@ impl Board {
     }
 }
 
-impl PartialEq for BoardCell{
+impl PartialEq for BoardCell {
     fn eq(&self, other: &Self) -> bool {
         self.coordinate == other.coordinate
     }

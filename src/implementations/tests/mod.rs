@@ -1,13 +1,14 @@
-use std::any::type_name;
-use std::fmt::{Debug, Display};
+use std::{
+    any::type_name,
+    fmt::{Debug, Display},
+};
 
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
-
 use test_data::{MSFrom, TestAction, OPEN_DATA};
 
 use crate::{
-    iter_neighbors, CellContent, Difficulty, Error, GameState, MSHash,
-    MSMatrix, MineSweeper, Result,
+    iter_neighbors, CellContent, Difficulty, Error, GameState, MSHash, MSMatrix, MineSweeper,
+    Result,
 };
 
 mod test_data;
@@ -67,15 +68,11 @@ fn invalid_number_of_mines() {
         let mut difficulty = Difficulty::custom(h, w, m);
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
 
-        check_success(M::from_rng(
-            difficulty, start_from, &mut rng,
-        ));
+        check_success(M::from_rng(difficulty, start_from, &mut rng));
 
         m = w * h - 9;
         difficulty = Difficulty::custom(h, w, m);
-        check_success(M::from_rng(
-            difficulty, start_from, &mut rng,
-        ));
+        check_success(M::from_rng(difficulty, start_from, &mut rng));
 
         m = w * h - 10;
         difficulty = Difficulty::custom(h, w, m);
@@ -180,10 +177,8 @@ fn compare_implementations() {
         let difficulty = Difficulty::hard();
         let (h, w, _) = difficulty.into();
         let start_from = (rng.gen_range(0..h), rng.gen_range(0..w));
-        let mut ms_1 =
-            M1::from_rng(difficulty, start_from, &mut rng.clone()).unwrap();
-        let mut ms_2 =
-            M2::from_rng(difficulty, start_from, &mut rng.clone()).unwrap();
+        let mut ms_1 = M1::from_rng(difficulty, start_from, &mut rng.clone()).unwrap();
+        let mut ms_2 = M2::from_rng(difficulty, start_from, &mut rng.clone()).unwrap();
 
         assert_eq!(ms_1.to_string(), ms_2.to_string());
 

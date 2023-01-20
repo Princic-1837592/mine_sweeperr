@@ -1,8 +1,6 @@
-use std::borrow::BorrowMut;
-use std::cell::RefCell;
 #[cfg(test)]
 use std::fmt::{Debug, Display, Formatter};
-use std::rc::Rc;
+use std::{borrow::BorrowMut, cell::RefCell, rc::Rc};
 
 use super::board::{Board, BoardCell, MARKED};
 

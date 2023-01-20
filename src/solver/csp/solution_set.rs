@@ -1,12 +1,11 @@
-use std::borrow::Borrow;
-use std::cell::RefCell;
-use std::cmp::Ordering;
 #[cfg(test)]
 use std::fmt::{Debug, Display, Formatter};
-use std::rc::Rc;
+use std::{borrow::Borrow, cell::RefCell, cmp::Ordering, rc::Rc};
 
-use crate::solver::csp::board::{Board, BoardCell};
-use crate::solver::csp::constraint::Constraint;
+use crate::solver::csp::{
+    board::{Board, BoardCell},
+    constraint::Constraint,
+};
 
 pub(crate) struct SolutionSet {
     constraints: Vec<Rc<RefCell<Constraint>>>,
