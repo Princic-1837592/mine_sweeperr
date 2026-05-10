@@ -19,67 +19,67 @@
 /// will produce a difficulty with `10x10` grid and `10` mines.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Difficulty {
-    height: usize,
-    width: usize,
-    mines: usize,
+	height: usize,
+	width: usize,
+	mines: usize,
 }
 
 impl Difficulty {
-    const fn new(height: usize, width: usize, mines: usize) -> Self {
-        Difficulty {
-            height,
-            width,
-            mines,
-        }
-    }
+	const fn new(height: usize, width: usize, mines: usize) -> Self {
+		Difficulty {
+			height,
+			width,
+			mines,
+		}
+	}
 
-    pub const fn easy() -> Self {
-        Self::new(9, 9, 10)
-    }
+	pub const fn easy() -> Self {
+		Self::new(9, 9, 10)
+	}
 
-    pub const fn medium() -> Self {
-        Self::new(16, 16, 40)
-    }
+	pub const fn medium() -> Self {
+		Self::new(16, 16, 40)
+	}
 
-    pub const fn hard() -> Self {
-        Self::new(16, 30, 99)
-    }
+	pub const fn hard() -> Self {
+		Self::new(16, 30, 99)
+	}
 
-    pub const fn custom(height: usize, width: usize, mines: usize) -> Self {
-        Self::new(height, width, mines)
-    }
+	pub const fn custom(height: usize, width: usize, mines: usize) -> Self {
+		Self::new(height, width, mines)
+	}
 
-    pub fn from_density(height: usize, width: usize, density: f32) -> Self {
-        Self::new(height, width, ((height * width) as f32 * density) as usize)
-    }
+	pub fn from_density(height: usize, width: usize, density: f32) -> Self {
+		Self::new(height, width, ((height * width) as f32 * density) as usize)
+	}
 
-    pub fn height(&self) -> usize {
-        self.height
-    }
+	pub fn height(&self) -> usize {
+		self.height
+	}
 
-    pub fn width(&self) -> usize {
-        self.width
-    }
+	pub fn width(&self) -> usize {
+		self.width
+	}
 
-    pub fn mines(&self) -> usize {
-        self.mines
-    }
+	pub fn mines(&self) -> usize {
+		self.mines
+	}
 }
 
 impl From<Difficulty> for (usize, usize, usize) {
-    fn from(difficulty: Difficulty) -> (usize, usize, usize) {
-        (difficulty.height, difficulty.width, difficulty.mines)
-    }
+	fn from(difficulty: Difficulty) -> (usize, usize, usize) {
+		(difficulty.height, difficulty.width, difficulty.mines)
+	}
 }
 
 impl From<(usize, usize, usize)> for Difficulty {
-    fn from((height, width, mines): (usize, usize, usize)) -> Difficulty {
-        Difficulty::custom(height, width, mines)
-    }
+	fn from((height, width, mines): (usize, usize, usize)) -> Difficulty {
+		Difficulty::custom(height, width, mines)
+	}
 }
 
 impl From<(usize, usize, f32)> for Difficulty {
-    fn from((height, width, density): (usize, usize, f32)) -> Difficulty {
-        Difficulty::from_density(height, width, density)
-    }
+	fn from((height, width, density): (usize, usize, f32)) -> Difficulty {
+		Difficulty::from_density(height, width, density)
+	}
 }
