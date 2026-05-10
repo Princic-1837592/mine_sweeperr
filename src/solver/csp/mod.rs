@@ -1,3 +1,5 @@
+// credits https://www.cs.utoronto.ca/~cvs/minesweeper/minesweeper.pdf
+// code https://www.cs.utoronto.ca/~cvs/minesweeper/
 use std::{cell::RefCell, rc::Rc};
 
 use board::Board;
